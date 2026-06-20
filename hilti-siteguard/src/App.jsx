@@ -18,6 +18,7 @@ import {
 import { doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { db, rtdb, isFirebaseReady } from './firebase.config.js'
 import PhantomReaperPageNew from './pages/PhantomReaperPage.jsx'
+import ChaosCurePage from './pages/ChaosCurePage.jsx'
 
 const APP_ID = 'buildshield-nexusop'
 
@@ -697,8 +698,6 @@ export default function App() {
 
           {activePage === 'chaos-cure' && (
             <ChaosCurePage
-              cureResolved={cureResolved}
-              setCureResolved={setCureResolved}
               triggerToast={triggerToast}
             />
           )}
@@ -1847,9 +1846,9 @@ function PhantomReaperPage({ projects, terminateProject, totalReclaimedCost }) {
 }
 
 /* -------------------------------------------------------------
- * 6. "CHAOS & CURE" AI DEMO ENGINE PAGE
+ * 6. "CHAOS & CURE" AI DEMO ENGINE PAGE (LEGACY)
  * ------------------------------------------------------------- */
-function ChaosCurePage({ cureResolved, setCureResolved, triggerToast }) {
+function LegacyChaosCurePage({ cureResolved, setCureResolved, triggerToast }) {
   const [demoState, setDemoState] = useState(() => localStorage.getItem('demo_state') || 'idle')
   const [logs, setLogs] = useState(() => {
     const saved = localStorage.getItem('demo_logs')
