@@ -1,351 +1,355 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  ComposedChart,
+  Line,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip
+  Tooltip,
+  Legend,
+  ReferenceLine
 } from 'recharts';
 
-// Minimal required icons for the expanded clock
-const IconClock = ({ className = "w-5 h-5" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+/* -------------------------------------------------------------
+ * ICONS (Matched to new Light Theme style)
+ * ------------------------------------------------------------- */
+const IconLeaf = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16c1.5 0 3-1.5 4-3 1-1.5 2-3 4-3s3 1.5 4 3c1.5 1.5 3 3 4 3m-4-3v6m-8-6v6M4 21h16" /></svg>
 );
-const IconDatabase = ({ className = "w-5 h-5" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.58 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.58 4 8 4s8-1.79 8-4M4 7c0-2.21 3.58-4 8-4s8 1.79 8 4m0 5c0 2.21-3.58 4-8 4s-8-1.79-8-4" /></svg>
+const IconShield = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
 );
-const IconTerminal = ({ className = "w-5 h-5" }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+const IconActivity = ({ className = "w-5 h-5" }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+);
+const IconCheck = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
 );
 
-const MOCK_WORKLOADS = [
-  { id: 'i-09f2b3491 (Web Server)', service: 'EC2', region: 'us-east-1', cpu: 8, emissions: 45, cost: 2.4 },
-  { id: 'db-clust-77 (Database)', service: 'RDS', region: 'eu-west-1', cpu: 65, emissions: 12, cost: 4.8 },
-  { id: 'lambda-worker-auth', service: 'Lambda', region: 'ap-southeast-1', cpu: 2, emissions: 5, cost: 0.2 },
-  { id: 'i-0ab44f992 (Staging API)', service: 'EC2', region: 'us-east-1', cpu: 4, emissions: 38, cost: 1.8 }
+/* -------------------------------------------------------------
+ * INITIAL MOCK DATA
+ * ------------------------------------------------------------- */
+const INITIAL_INSIGHTS = [
+  {
+    id: 'ins-01',
+    resource: 'db-instance-01 (US-East)',
+    issue: 'High Carbon & Low Use: Server idling at 5% CPU on a coal-heavy grid.',
+    recommendation: 'Migrate snapshot to eu-west-1 (Green Grid) or downsize instance.',
+    savingsStr: '12.4 kgCO₂e / month',
+    savingsNum: 12.4,
+    type: 'carbon',
+    btnText: 'Execute Migration'
+  },
+  {
+    id: 'ins-02',
+    resource: 'dev-api-web',
+    issue: 'Security Risk: Open port 22 exposed to the public internet.',
+    recommendation: 'Apply restricted Security Group rules via AWS Boto3 API.',
+    savingsStr: 'Eliminates critical vulnerability',
+    savingsNum: 0,
+    type: 'security',
+    btnText: 'Fix Security'
+  }
 ];
 
-export default function ExpandedDebtClockPage({
-  carbonDebt = 2068.487,
-  financialDebt = 7097.65,
-  userCarbonRate = 0.5,
-  setUserCarbonRate = () => {},
-  userFinRate = 2.1,
-  setUserFinRate = () => {},
-  currentCarbonRate = 0.5,
-  currentFinRate = 2.1,
-  lightsOut = false,
-}) {
-  const [workloads, setWorkloads] = useState(MOCK_WORKLOADS);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [totalSavedCarbon, setTotalSavedCarbon] = useState(0);
-  const [totalSavedCost, setTotalSavedCost] = useState(0);
+const INITIAL_AUDIT_LOG = [
+  { id: 'log-1', time: '2026-06-20 17:30', event: 'Scheduled Cron: Nightly Dev Shutdown', resource: 'dev-api-web', trigger: 'System (Auto)', impact: 'Saved 1.2 kgCO₂e', status: 'Completed', color: 'teal' },
+  { id: 'log-2', time: '2026-06-20 15:15', event: 'Security Patch Deployment', resource: 'prod-load-balancer', trigger: 'Manual (Mikael)', impact: '0.0 kgCO₂e', status: 'Completed', color: 'slate' },
+  { id: 'log-3', time: '2026-06-20 09:10', event: 'Grid Carbon Intensity Spike Alert', resource: 'us-east-1 Region', trigger: 'System (Alert)', impact: 'Increased Emission', status: 'Logged', color: 'rose' }
+];
 
-  // Generate forecasting data
-  const projectionData = useMemo(() => {
-    const data = [];
-    const baseCarbon = carbonDebt;
-    for (let hour = 0; hour <= 24; hour += 4) {
-      const rateBAU = userCarbonRate;
-      const rateLightsOut = userCarbonRate * (lightsOut ? 0.3 : 1.0);
-      const rateOpt = userCarbonRate * 0.01;
-      
-      data.push({
-        name: `+${hour}h`,
-        BAU: Math.round(baseCarbon + rateBAU * hour * 3600),
-        'Shift Control': Math.round(baseCarbon + rateLightsOut * hour * 3600),
-        'AI Optimized': Math.round(baseCarbon + rateOpt * hour * 3600),
-      });
-    }
-    return data;
-  }, [carbonDebt, userCarbonRate, lightsOut]);
+const GENERATE_BASE_GRAPH = () => {
+  const data = [];
+  let baseEmission = 45.0;
+  for (let i = 0; i < 24; i++) {
+    // Add slight random fluctuation to baseline
+    const fluctuation = (Math.random() - 0.5) * 2; 
+    data.push({
+      hour: `${String(i).padStart(2, '0')}:00`,
+      emissions: Number((baseEmission + fluctuation).toFixed(1)),
+      eventMarker: 0 // Used for bar chart overlay
+    });
+  }
+  return data;
+};
 
-  const handleAnalyze = (workload) => {
-    setLoading(true);
-    // Simulate AI API delay
+/* -------------------------------------------------------------
+ * MAIN COMPONENT
+ * ------------------------------------------------------------- */
+export default function CarbonDebtClock() {
+  // Live Metrics State
+  const [totalCarbonFootprint, setTotalCarbonFootprint] = useState(1450.5);
+  const [accumulatedCarbonSaved, setAccumulatedCarbonSaved] = useState(342.8);
+  const [activeVulnerabilities, setActiveVulnerabilities] = useState(3);
+  const [pue, setPue] = useState(1.42);
+
+  // Data States
+  const [insights, setInsights] = useState(INITIAL_INSIGHTS);
+  const [auditLog, setAuditLog] = useState(INITIAL_AUDIT_LOG);
+  const [graphData, setGraphData] = useState(GENERATE_BASE_GRAPH());
+  const [processingId, setProcessingId] = useState(null);
+
+  // Current simulated hour (for graph plotting)
+  const currentHourIndex = 12; // e.g., 12:00 PM
+
+  // Action Handler: Executes AI recommendation
+  const handleExecuteAction = (insight) => {
+    setProcessingId(insight.id);
+
+    // Simulate API delay
     setTimeout(() => {
-      let aiResponse;
-      if (workload.cpu < 15) {
-        aiResponse = {
-          status: "Warning",
-          action_type: "Downsize or Shutdown",
-          reason: `CPU utilization is extremely low at ${workload.cpu}%. Operating in ${workload.region} produces high thermal footprint relative to utilization.`,
-          recommendation: `Downgrade ${workload.id} to micro instance or schedule immediate shutdown.`,
-          estimated_reduction_gCO2e: workload.emissions * 10,
-          estimated_savings_myr: workload.cost * 8,
-        };
-      } else {
-        aiResponse = {
-          status: "Healthy",
-          action_type: "None",
-          reason: `Resource is efficiently utilized at ${workload.cpu}% capacity.`,
-          recommendation: "Maintain current state. No phantom drain detected.",
-          estimated_reduction_gCO2e: 0,
-          estimated_savings_myr: 0,
-        };
+      // 1. Update Top Metrics
+      if (insight.type === 'carbon') {
+        setTotalCarbonFootprint(prev => prev - insight.savingsNum);
+        setAccumulatedCarbonSaved(prev => prev + insight.savingsNum);
+        setPue(prev => Number((prev - 0.05).toFixed(2))); // Improve PUE slightly
+      } else if (insight.type === 'security') {
+        setActiveVulnerabilities(prev => Math.max(0, prev - 1));
       }
-      setAiAnalysis({ ...aiResponse, targetId: workload.id });
-      setLoading(false);
-    }, 1200);
-  };
 
-  const handleApproveAction = () => {
-    if (!aiAnalysis) return;
-    setTotalSavedCarbon(prev => prev + aiAnalysis.estimated_reduction_gCO2e);
-    setTotalSavedCost(prev => prev + aiAnalysis.estimated_savings_myr);
-    setWorkloads(workloads.filter(w => w.id !== aiAnalysis.targetId));
-    setAiAnalysis(null);
+      // 2. Remove from Insights Panel
+      setInsights(prev => prev.filter(i => i.id !== insight.id));
+
+      // 3. Add to Audit Log
+      const now = new Date();
+      const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      
+      const newLog = {
+        id: `log-${Date.now()}`,
+        time: timeStr,
+        event: insight.type === 'carbon' ? 'AI Rightsizing & Migration Executed' : 'Automated Security Rule Applied',
+        resource: insight.resource,
+        trigger: 'Manual (Dashboard UI)',
+        impact: insight.type === 'carbon' ? `Saved ${insight.savingsNum} kgCO₂e` : 'Vulnerability Patched',
+        status: 'Completed',
+        color: insight.type === 'carbon' ? 'teal' : 'indigo'
+      };
+      
+      setAuditLog(prev => [newLog, ...prev]);
+
+      // 4. Update Graph Data accurately (bend the line down from current hour onwards)
+      if (insight.type === 'carbon') {
+        setGraphData(prev => {
+          const newData = [...prev];
+          // Drop all future emissions by the savings amount
+          for (let i = currentHourIndex; i < newData.length; i++) {
+            newData[i].emissions = Number(Math.max(0, newData[i].emissions - insight.savingsNum).toFixed(1));
+          }
+          // Record the event spike for the bar chart
+          newData[currentHourIndex].eventMarker = insight.savingsNum;
+          return newData;
+        });
+      }
+
+      setProcessingId(null);
+    }, 1500); // 1.5s delay to simulate cloud API call
   };
 
   return (
-    <div className="space-y-8 animate-fade-in text-slate-900 dark:text-blue pb-10">
+    <div className="space-y-8 animate-fade-in pb-10">
+      
       <div className="space-y-2">
-        <h2 className="text-3xl font-extrabold tracking-tight">⏱️ Expanded Carbon & Security Debt Clock</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm max-w-3xl">
-          Complete orchestrator view. Calculates ongoing environmental emissions and financial overhead, tracks active infrastructure payloads, and deploys AI logic to terminate phantom workloads.
+        <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-700">🌍 Carbon & Security Orchestrator</h2>
+        <p className="text-slate-500 text-sm max-w-3xl">
+          Real-time API-driven telemetry. Monitor infrastructure health, execute automated cloud emission reductions, and track complete security audit trails seamlessly.
         </p>
       </div>
 
-      {/* TOP ROW: Giant Live Debt Displays */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="p-8 rounded-2xl border border-red-500/30 bg-[#131b2e] shadow-lg relative overflow-hidden flex flex-col justify-between h-64">
-          <div className="space-y-1 z-10">
-            <span className="text-xs font-extrabold text-red-500 uppercase tracking-wider block flex items-center gap-2">
-              <IconClock className="w-4 h-4" /> Carbon Accumulator
-            </span>
-            <h3 className="text-sm text-slate-400">Dynamic CO2 release estimation from active cloud servers</h3>
+      {/* =========================================
+          SECTION A: LIVE IMPACT METRICS (TOP BANNER)
+          ========================================= */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Metric 1 */}
+        <div className="p-6 rounded-2xl border border-rose-200 bg-white/80 backdrop-blur-md shadow-sm shadow-rose-100/50 flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Carbon Footprint</span>
+            <div className="p-1.5 bg-rose-100 rounded-lg text-rose-500"><IconLeaf className="w-4 h-4" /></div>
           </div>
-          <div className="z-10 mt-4">
-            <p className="text-6xl font-mono font-bold text-red-500 tracking-tight" style={{ textShadow: '0 0 20px rgba(239,68,68,0.5)' }}>
-              {carbonDebt.toFixed(3)}
-            </p>
-            <span className="text-sm text-slate-400">kg CO₂ emissions in progress</span>
-          </div>
-          <div className="flex justify-between text-sm text-slate-400 border-t border-slate-800 pt-4 mt-4 z-10">
-            <span>Base Rate: {userCarbonRate.toFixed(2)}/s</span>
-            <span className="font-bold text-red-500">Current Adjusted: {currentCarbonRate.toFixed(3)}/s</span>
-          </div>
-          <div className="absolute -bottom-10 -right-10 opacity-5">
-            <IconClock className="w-64 h-64 text-red-500" />
-          </div>
+          <p className="text-4xl font-mono font-bold text-rose-500 transition-all duration-700">{totalCarbonFootprint.toFixed(1)}</p>
+          <span className="text-xs text-slate-400 mt-1">Live MTCO₂e Output</span>
         </div>
 
-        <div className="p-8 rounded-2xl border border-amber-500/30 bg-[#131b2e] shadow-lg relative overflow-hidden flex flex-col justify-between h-64">
-          <div className="space-y-1 z-10">
-            <span className="text-xs font-extrabold text-amber-500 uppercase tracking-wider block flex items-center gap-2">
-              <IconDatabase className="w-4 h-4" /> Financial Waste Clock
-            </span>
-            <h3 className="text-sm text-slate-400">Unoptimized storage cost and idle compute drain</h3>
+        {/* Metric 2 */}
+        <div className="p-6 rounded-2xl border border-teal-200 bg-white/80 backdrop-blur-md shadow-sm shadow-teal-100/50 flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Accumulated Carbon Saved</span>
+            <div className="p-1.5 bg-teal-100 rounded-lg text-teal-600"><IconActivity className="w-4 h-4" /></div>
           </div>
-          <div className="z-10 mt-4">
-            <p className="text-6xl font-mono font-bold text-amber-500 tracking-tight" style={{ textShadow: '0 0 20px rgba(245,158,11,0.5)' }}>
-              RM {financialDebt.toFixed(2)}
-            </p>
-            <span className="text-sm text-slate-400">MYR accumulated losses</span>
+          <p className="text-4xl font-mono font-bold text-teal-500 transition-all duration-700">{accumulatedCarbonSaved.toFixed(1)}</p>
+          <span className="text-xs text-slate-400 mt-1">kgCO₂e Prevented System-wide</span>
+        </div>
+
+        {/* Metric 3 */}
+        <div className="p-6 rounded-2xl border border-indigo-200 bg-white/80 backdrop-blur-md shadow-sm shadow-indigo-100/50 flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Active Vulnerabilities</span>
+            <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-500"><IconShield className="w-4 h-4" /></div>
           </div>
-          <div className="flex justify-between text-sm text-slate-400 border-t border-slate-800 pt-4 mt-4 z-10">
-            <span>Base Rate: RM{userFinRate.toFixed(2)}/s</span>
-            <span className="font-bold text-amber-500">Current Adjusted: RM{currentFinRate.toFixed(3)}/s</span>
+          <p className="text-4xl font-mono font-bold text-indigo-500 transition-all duration-700">{activeVulnerabilities}</p>
+          <span className="text-xs text-slate-400 mt-1">Critical/High Security Risks</span>
+        </div>
+
+        {/* Metric 4 */}
+        <div className="p-6 rounded-2xl border border-sky-200 bg-white/80 backdrop-blur-md shadow-sm shadow-sky-100/50 flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Real-time Datacenter PUE</span>
+            <div className="p-1.5 bg-sky-100 rounded-lg text-sky-500"><IconActivity className="w-4 h-4" /></div>
           </div>
-          <div className="absolute -bottom-10 -right-10 opacity-5">
-            <IconDatabase className="w-64 h-64 text-amber-500" />
-          </div>
+          <p className="text-4xl font-mono font-bold text-sky-500 transition-all duration-700">{pue.toFixed(2)}</p>
+          <span className="text-xs text-slate-400 mt-1">Power Usage Effectiveness (Ideal ~1.0)</span>
         </div>
       </div>
 
-      {/* MIDDLE ROW: AI Orchestrator Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Col: Live Infrastructure */}
-        <div className="lg:col-span-2 p-6 rounded-2xl border border-slate-800 bg-[#131b2e] shadow-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Live Infrastructure Payloads</h3>
-            <span className="px-3 py-1 bg-blue-900/40 text-blue-400 text-xs font-bold rounded-full border border-blue-800">
-              {workloads.length} Active Nodes
-            </span>
+      {/* =========================================
+          SECTION B: DYNAMIC ANALYTICS (MAIN GRAPH)
+          ========================================= */}
+      <div className="p-6 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm space-y-4">
+        <div className="flex justify-between items-end">
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Emissions vs. Optimization Events</h3>
+            <p className="text-xs text-slate-500">Dual-axis tracking of live carbon output trajectory against automated system mitigation events.</p>
           </div>
-          
+          <div className="flex items-center gap-3 text-[10px] font-bold text-slate-500 uppercase">
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-400"></span> Live Emissions</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-teal-400"></span> Action Markers</span>
+          </div>
+        </div>
+
+        <div className="h-80 w-full bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={graphData} margin={{ top: 20, right: 20, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <XAxis dataKey="hour" stroke="#94a3b8" tick={{ fontSize: 11 }} />
+              {/* Left Y Axis for Carbon Line */}
+              <YAxis yAxisId="left" stroke="#fb7185" tick={{ fontSize: 11 }} domain={['dataMin - 10', 'dataMax + 10']} />
+              {/* Right Y Axis for Bar Marker */}
+              <YAxis yAxisId="right" orientation="right" stroke="#2dd4bf" tick={{ fontSize: 11 }} hide />
+              
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#334155', fontSize: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+              />
+              
+              <ReferenceLine yAxisId="left" x={graphData[currentHourIndex].hour} stroke="#94a3b8" strokeDasharray="3 3" label={{ position: 'top', value: 'CURRENT', fill: '#94a3b8', fontSize: 10 }} />
+
+              <Bar yAxisId="right" dataKey="eventMarker" barSize={20} fill="#2dd4bf" radius={[4, 4, 0, 0]} name="Mitigation Event Savings" />
+              <Line yAxisId="left" type="monotone" dataKey="emissions" stroke="#fb7185" strokeWidth={3} dot={{ r: 3, fill: '#fb7185' }} activeDot={{ r: 6 }} name="kgCO₂e Output" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* =========================================
+          SECTION C: AI-DRIVEN INSIGHTS
+          ========================================= */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-extrabold text-slate-700 tracking-tight">🧠 AI-Driven Insights & Action Center</h3>
+        <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 text-xs font-semibold uppercase text-slate-500">
-                  <th className="py-3 px-4">Resource Node</th>
-                  <th className="py-3 px-4">Cloud Region</th>
-                  <th className="py-3 px-4">CPU Load</th>
-                  <th className="py-3 px-4">Est. Waste</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                <tr className="border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 bg-slate-50/50">
+                  <th className="py-4 px-6">Target Resource</th>
+                  <th className="py-4 px-6">Issue Detected (Why it emits/risks)</th>
+                  <th className="py-4 px-6">AI Recommended Action</th>
+                  <th className="py-4 px-6">Estimated Savings / Fix</th>
+                  <th className="py-4 px-6 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50">
-                {workloads.map((w, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-4 px-4">
-                      <p className="font-bold text-slate-200 text-sm">{w.id}</p>
-                      <span className="text-xs text-slate-500">{w.service}</span>
-                    </td>
-                    <td className="py-4 px-4 text-sm text-slate-300">{w.region}</td>
-                    <td className="py-4 px-4">
-                      <span className={`font-mono text-sm font-bold ${w.cpu < 15 ? 'text-red-400' : 'text-emerald-400'}`}>
-                        {w.cpu}%
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-sm text-amber-400 font-mono">RM {w.cost}/hr</td>
-                    <td className="py-4 px-4 text-right">
-                      <button 
-                        onClick={() => handleAnalyze(w)}
-                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-colors border border-slate-600"
-                      >
-                        Run AI Diagnosis
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {workloads.length === 0 && (
+              <tbody className="divide-y divide-slate-100">
+                {insights.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="py-8 text-center text-emerald-500 text-sm font-bold">
-                      All workloads optimized. No phantom leaks detected.
+                    <td colSpan="5" className="py-8 text-center text-slate-500 text-sm">
+                      All workloads optimized. No outstanding AI recommendations.
                     </td>
                   </tr>
+                ) : (
+                  insights.map(insight => (
+                    <tr key={insight.id} className="hover:bg-slate-50/50 text-sm transition-colors group">
+                      <td className="py-4 px-6 font-bold text-slate-700">{insight.resource}</td>
+                      <td className="py-4 px-6 text-slate-600 max-w-[250px] leading-relaxed">{insight.issue}</td>
+                      <td className="py-4 px-6 text-indigo-600 font-medium max-w-[250px]">{insight.recommendation}</td>
+                      <td className="py-4 px-6 font-mono text-xs font-semibold text-teal-600">{insight.savingsStr}</td>
+                      <td className="py-4 px-6 text-right">
+                        <button
+                          onClick={() => handleExecuteAction(insight)}
+                          disabled={processingId !== null}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-2 ml-auto w-[160px] ${
+                            processingId === insight.id 
+                              ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
+                              : insight.type === 'carbon' 
+                                ? 'bg-teal-400 hover:bg-teal-500 text-white shadow-teal-200' 
+                                : 'bg-indigo-400 hover:bg-indigo-500 text-white shadow-indigo-200'
+                          }`}
+                        >
+                          {processingId === insight.id ? (
+                            <span className="flex items-center gap-2"><div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"/> Executing...</span>
+                          ) : (
+                            <span className="flex items-center gap-1.5"><IconCheck /> {insight.btnText}</span>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
           </div>
         </div>
+      </div>
 
-        {/* Right Col: AI Output Engine */}
-        <div className="p-6 rounded-2xl border-2 border-dashed border-slate-700 bg-[#0f1523] shadow-lg relative flex flex-col">
-          <div className="flex items-center gap-2 mb-6">
-            <IconTerminal className="w-5 h-5 text-indigo-400" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">AI Remediation Engine</h3>
-          </div>
-
-          <div className="flex-grow flex flex-col justify-center">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center space-y-4">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
-                <p className="text-xs text-slate-400 animate-pulse">Running architectural analysis...</p>
-              </div>
-            ) : aiAnalysis ? (
-              <div className="space-y-5 animate-slide-in">
-                <div className={`p-4 rounded-xl border ${aiAnalysis.status === 'Warning' ? 'bg-red-900/20 border-red-800/50' : 'bg-emerald-900/20 border-emerald-800/50'}`}>
-                  <p className="text-[10px] font-bold uppercase text-slate-500 mb-1">Diagnosis ({aiAnalysis.targetId})</p>
-                  <p className="text-sm text-slate-200">{aiAnalysis.reason}</p>
-                </div>
-                
-                <div className="p-4 bg-indigo-900/20 border border-indigo-800/50 rounded-xl">
-                  <p className="text-[10px] font-bold uppercase text-slate-500 mb-1">AI Recommendation</p>
-                  <p className="text-sm text-indigo-200 font-semibold">{aiAnalysis.recommendation}</p>
-                </div>
-
-                {aiAnalysis.status === 'Warning' && (
-                  <div className="pt-2">
-                    <div className="flex justify-between text-xs mb-3 text-emerald-400 font-mono font-bold">
-                      <span>Savable: {aiAnalysis.estimated_reduction_gCO2e} gCO₂e</span>
-                      <span>RM {aiAnalysis.estimated_savings_myr}</span>
-                    </div>
-                    <button 
-                      onClick={handleApproveAction}
-                      className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-900/20"
-                    >
-                      Approve & Execute Action
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center text-slate-500">
-                <p className="text-sm">Select a workload from the active payload table to generate an AI cost & carbon saving strategy.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Gamification Stats */}
-          <div className="mt-6 pt-6 border-t border-slate-800 grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-[10px] text-slate-500 uppercase font-bold">Total CO₂ Saved</p>
-              <p className="text-xl font-bold text-emerald-400">{totalSavedCarbon} <span className="text-xs">g</span></p>
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-500 uppercase font-bold">Capital Reclaimed</p>
-              <p className="text-xl font-bold text-amber-400"><span className="text-xs">RM</span> {totalSavedCost}</p>
-            </div>
+      {/* =========================================
+          SECTION D: PROCESS & ACTION AUDIT LOG
+          ========================================= */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-end">
+          <h3 className="text-lg font-extrabold text-slate-700 tracking-tight">📋 System Activity & Audit History</h3>
+          <span className="text-xs text-slate-500 bg-white/80 px-3 py-1 rounded-full border border-slate-200 shadow-sm">Immutable Infrastructure Log</span>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 bg-slate-50/50">
+                  <th className="py-4 px-6 whitespace-nowrap">Timestamp</th>
+                  <th className="py-4 px-6">Event / Process</th>
+                  <th className="py-4 px-6">Affected Resource</th>
+                  <th className="py-4 px-6">Triggered By</th>
+                  <th className="py-4 px-6">Carbon Impact</th>
+                  <th className="py-4 px-6">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {auditLog.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-50/50 text-sm transition-colors text-slate-600">
+                    <td className="py-4 px-6 font-mono text-xs">{log.time}</td>
+                    <td className="py-4 px-6 font-semibold text-slate-700">{log.event}</td>
+                    <td className="py-4 px-6 font-mono text-xs">{log.resource}</td>
+                    <td className="py-4 px-6">
+                      <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md text-[10px] font-bold border border-slate-200">
+                        {log.trigger}
+                      </span>
+                    </td>
+                    <td className={`py-4 px-6 font-mono text-xs font-semibold ${
+                      log.impact.includes('Saved') ? 'text-teal-600' : log.impact.includes('Increase') ? 'text-rose-500' : 'text-slate-500'
+                    }`}>
+                      {log.impact}
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wide text-slate-700">
+                        <span className={`w-2 h-2 rounded-full bg-${log.color}-400`}></span>
+                        {log.status}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      {/* BOTTOM ROW: Rate Calibrators & Forecast */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 p-6 rounded-2xl border border-slate-800 bg-[#131b2e] shadow-lg space-y-8">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Telemetry Calibration</h3>
-          
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <label className="text-sm font-bold text-slate-300">Base Carbon Accumulation</label>
-              <span className="font-mono text-sm font-semibold text-red-400">{userCarbonRate.toFixed(2)} kg/s</span>
-            </div>
-            <input
-              type="range" min="0.1" max="5.0" step="0.05"
-              value={userCarbonRate}
-              onChange={(e) => setUserCarbonRate(Number(e.target.value))}
-              className="w-full accent-red-500"
-            />
-            <p className="text-xs text-slate-500">Adjusts for average jobsite load size.</p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <label className="text-sm font-bold text-slate-300">Base Cost Waste Rate</label>
-              <span className="font-mono text-sm font-semibold text-amber-400">RM {userFinRate.toFixed(2)} /s</span>
-            </div>
-            <input
-              type="range" min="0.5" max="10.0" step="0.1"
-              value={userFinRate}
-              onChange={(e) => setUserFinRate(Number(e.target.value))}
-              className="w-full accent-amber-500"
-            />
-            <p className="text-xs text-slate-500">On-demand pricing fluctuation simulator.</p>
-          </div>
-        </div>
-
-        <div className="lg:col-span-2 p-6 rounded-2xl border border-slate-800 bg-[#131b2e] shadow-lg space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">24-Hour Predictive Forecasting</h3>
-            <p className="text-xs text-slate-500">Calculated comparison of projected emissions under different intervention schedules.</p>
-          </div>
-
-          <div className="h-64 w-full bg-[#0d121f] p-4 rounded-xl border border-slate-800/80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={projectionData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorBAU" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorControl" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorOpt" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="name" stroke="#64748b" tick={{ fontSize: 11 }} />
-                <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
-                />
-                <Area type="monotone" dataKey="BAU" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorBAU)" />
-                <Area type="monotone" dataKey="Shift Control" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorControl)" />
-                <Area type="monotone" dataKey="AI Optimized" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorOpt)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
