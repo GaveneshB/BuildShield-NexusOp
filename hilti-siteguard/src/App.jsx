@@ -12,6 +12,8 @@ import {
   Area
 } from 'recharts'
 
+import CarbonDebtClock from './components/CarbonDebtClock'
+
 /* -------------------------------------------------------------
  * FIREBASE INITIALIZATION & DB LAYER
  * ------------------------------------------------------------- */
@@ -683,18 +685,7 @@ export default function App() {
           )}
 
           {activePage === 'debt-clock' && (
-            <DebtClockPage
-              carbonDebt={carbonDebt}
-              financialDebt={financialDebt}
-              userCarbonRate={userCarbonRate}
-              setUserCarbonRate={setUserCarbonRate}
-              userFinRate={userFinRate}
-              setUserFinRate={setUserFinRate}
-              currentCarbonRate={currentCarbonRate}
-              currentFinRate={currentFinRate}
-              lightsOut={lightsOut}
-              cureResolved={cureResolved}
-            />
+            <CarbonDebtClock />
           )}
 
           {activePage === 'lights-out' && (
