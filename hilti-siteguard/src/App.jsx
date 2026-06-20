@@ -1,121 +1,50 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
+import TrustScore from './components/TrustScore'
+import DebtClock from './components/DebtClock'
+import ShiftScheduler from './components/ShiftScheduler'
+import PhantomReaper from './components/PhantomReaper'
+import ChaosCure from './components/ChaosCure'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [selectedProject, setSelectedProject] = useState('Riverside Tower')
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="dashboard-root">
+      <header className="topbar">
+        <h1>Hilti SiteGuard — Energy & Security Dashboard</h1>
+        <div className="project-select">Project: {selectedProject}</div>
+      </header>
 
-      <div className="ticks"></div>
+      <main className="grid">
+        <section className="panel">
+          <h2>Dynamic Subcontractor Trust Scoring</h2>
+          <TrustScore />
+        </section>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <section className="panel">
+          <h2>Carbon & Security Debt Clock</h2>
+          <DebtClock />
+        </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        <section className="panel">
+          <h2>Jobsite "Lights Out" Scheduler</h2>
+          <ShiftScheduler />
+        </section>
+
+        <section className="panel wide">
+          <h2>Phantom Infrastructure Auto-Reaper</h2>
+          <PhantomReaper />
+        </section>
+
+        <section className="panel wide">
+          <h2>Chaos & Cure Demo Engine</h2>
+          <ChaosCure />
+        </section>
+      </main>
+
+      <footer className="footer">Panel simulation only — integrates with cloud APIs in backend.</footer>
+    </div>
   )
 }
 
