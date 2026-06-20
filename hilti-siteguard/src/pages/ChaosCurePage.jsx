@@ -17,24 +17,24 @@ const IconAlert = ({ className = 'w-5 h-5' }) => (
 
 const IconRefresh = ({ className = 'w-5 h-5' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
   </svg>
 );
 
 export default function ChaosCurePage({ triggerToast }) {
   const [scenarios, setScenarios] = useState([
-    { id: 'cryptojacking',     label: 'Cryptojacking Energy Spike',                                          category: 'resource-abuse' },
-    { id: 'dataLeak',          label: 'Mass Data Exfiltration Detected',                                     category: 'data-exfiltration' },
-    { id: 'ddos',              label: 'DDoS Botnet Attack Detected',                                         category: 'network' },
-    { id: 'insiderThreat',     label: 'Insider Threat — Anomalous Access Pattern',                           category: 'identity' },
-    { id: 'ransomwareStaging', label: 'Ransomware Staging Indicators Detected',                              category: 'infra-integrity' },
-    { id: 'misconfigExposure', label: 'Misconfiguration Exposure Detected',                                  category: 'infra-integrity' },
-    { id: 'stolenCredentials', label: 'Stolen Cloud Credentials',                                           category: 'identity' },
-    { id: 'cve202144228',      label: 'Log4Shell — Apache Log4j RCE (CVE-2021-44228)',                       category: 'rce' },
-    { id: 'cve202334362',      label: 'MOVEit Transfer SQL Injection — Data Exfiltration (CVE-2023-34362)', category: 'data-exfiltration' },
-    { id: 'cve20170144',       label: 'EternalBlue / WannaCry Lateral Movement (CVE-2017-0144)',             category: 'lateral-movement' },
-    { id: 'cve20220847',       label: 'Dirty Pipe Linux Privilege Escalation (CVE-2022-0847)',               category: 'privilege-escalation' },
-    { id: 'cve20243400',       label: 'Palo Alto PAN-OS Zero-Day Command Injection (CVE-2024-3400)',         category: 'rce' },
+    { id: 'cryptojacking', label: 'Cryptojacking Energy Spike', category: 'resource-abuse' },
+    { id: 'dataLeak', label: 'Mass Data Exfiltration Detected', category: 'data-exfiltration' },
+    { id: 'ddos', label: 'DDoS Botnet Attack Detected', category: 'network' },
+    { id: 'insiderThreat', label: 'Insider Threat — Anomalous Access Pattern', category: 'identity' },
+    { id: 'ransomwareStaging', label: 'Ransomware Staging Indicators Detected', category: 'infra-integrity' },
+    { id: 'misconfigExposure', label: 'Misconfiguration Exposure Detected', category: 'infra-integrity' },
+    { id: 'stolenCredentials', label: 'Stolen Cloud Credentials', category: 'identity' },
+    { id: 'cve202144228', label: 'Log4Shell — Apache Log4j RCE (CVE-2021-44228)', category: 'rce' },
+    { id: 'cve202334362', label: 'MOVEit Transfer SQL Injection — Data Exfiltration (CVE-2023-34362)', category: 'data-exfiltration' },
+    { id: 'cve20170144', label: 'EternalBlue / WannaCry Lateral Movement (CVE-2017-0144)', category: 'lateral-movement' },
+    { id: 'cve20220847', label: 'Dirty Pipe Linux Privilege Escalation (CVE-2022-0847)', category: 'privilege-escalation' },
+    { id: 'cve20243400', label: 'Palo Alto PAN-OS Zero-Day Command Injection (CVE-2024-3400)', category: 'rce' },
   ]);
   const [policies, setPolicies] = useState([
     { id: 'conservative', label: 'Conservative' },
@@ -261,9 +261,8 @@ export default function ChaosCurePage({ triggerToast }) {
 
         <div className="flex items-center gap-2 shrink-0">
           <div
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-              connected ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-            }`}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${connected ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+              }`}
           >
             {connected ? '● Connected' : '● Disconnected'}
           </div>
@@ -283,11 +282,10 @@ export default function ChaosCurePage({ triggerToast }) {
               <button
                 key={p.id}
                 onClick={() => handlePolicyChange(p.id)}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
-                  activePolicy === p.id
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${activePolicy === p.id
                     ? 'bg-rose-400 text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
+                  }`}
               >
                 {p.label}
               </button>
@@ -321,17 +319,16 @@ export default function ChaosCurePage({ triggerToast }) {
             <button
               onClick={handleTrigger}
               disabled={running || !connected || aiAnalyzing}
-              className={`px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm transition flex items-center gap-2 ${
-                running || !connected || aiAnalyzing
+              className={`px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm transition flex items-center gap-2 ${running || !connected || aiAnalyzing
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   : 'bg-rose-400 hover:bg-rose-500 text-white active-pulse'
-              }`}
+                }`}
             >
               {aiAnalyzing ? (
                 <>
                   <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                   AI Analyzing...
                 </>
