@@ -1,15 +1,30 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write for all artifacts and their subcollections
-    match /artifacts/{projectId}/{document=**} {
-      allow read, write: if true;
+    // Basic auth check placeholder, or change to true for testing if no auth is set up
+    function isAuth() { return true; /* request.auth != null; */ }
+
+    match /projects/{id} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+    match /cloudResources/{id} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+    match /reapEvents/{id} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update, delete: if false;  // immutable log
+    }
+    match /reapSummary/{id} {
+      allow read: if isAuth();
+      allow write: if isAuth();
     }
     
-    // Fallback: deny all other access
-    match /{document=**} {
-      allow read, write: if false;
+    // Existing artifact rules (if any from previous features)
+    match /artifacts/{document=**} {
+      allow read, write: if true;
     }
   }
 }

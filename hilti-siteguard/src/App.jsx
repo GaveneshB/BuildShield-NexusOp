@@ -17,6 +17,7 @@ import {
  * ------------------------------------------------------------- */
 import { doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { db, rtdb, isFirebaseReady } from './firebase.config.js'
+import PhantomReaperPageNew from './pages/PhantomReaperPage.jsx'
 
 const APP_ID = 'buildshield-nexusop'
 
@@ -688,11 +689,7 @@ export default function App() {
           )}
 
           {activePage === 'phantom-reaper' && (
-            <PhantomReaperPage
-              projects={projects}
-              terminateProject={terminateProject}
-              totalReclaimedCost={totalReclaimedCost}
-            />
+            <PhantomReaperPageNew />
           )}
 
           {activePage === 'chaos-cure' && (
