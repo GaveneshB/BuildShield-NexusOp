@@ -110,8 +110,18 @@ export function useChaosSocket(onEvent) {
 
   const setPolicy = useCallback((policyId) => {
     stateRef.current.policy = policyId;
-    onEventRef.current('policy-updated', { orgId: 'mock-org' });
   }, []);
+
+  const reset = useCallback(() => {
+    if (stateRef.current.costTimer) {
+      clearInterval(stateRef.current.costTimer);
+      stateRef.current.costTimer = null;
+    }
+    stateRef.current.activeIncidentId = null;
+    stateRef.current.costAccumulated = 0;
+    stateRef.current.elapsedSeconds = 0;
+  }, []);
+
 
   return {
     connected,
@@ -121,5 +131,6 @@ export function useChaosSocket(onEvent) {
     denyIncident,
     rollbackIncident,
     setPolicy,
+    reset,
   };
 }
