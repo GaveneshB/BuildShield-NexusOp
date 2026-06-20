@@ -1,8 +1,7 @@
 import fs from 'fs';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, query } from 'firebase/firestore';
 
-// Parse .env manually to avoid needing dotenv package
 const envFile = fs.readFileSync('.env', 'utf-8');
 const env = {};
 envFile.split('\n').forEach(line => {
@@ -24,41 +23,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+async function clearCollection(name) {
+  const snap = await getDocs(query(collection(db, name)));
+  const deletes = snap.docs.map(d => deleteDoc(d.ref));
+  await Promise.all(deletes);
+  console.log(`Cleared ${snap.size} docs from ${name}`);
+}
+
 async function seed() {
-  console.log('Seeding outstanding Hilti mock data to Firebase...');
+  console.log('🇲🇾 Seeding Malaysian Hilti construction project data...');
+
+  // Clear existing data
+  await clearCollection('projects');
+  await clearCollection('cloudResources');
+  await clearCollection('reapEvents');
 
   const projects = [
-    {
-      id: 'proj_frankfurt_hq',
-      name: 'Frankfurt Central Hub Rebuild',
-      hiltiProjectId: 'HILTI-EU-2441A',
-      status: 'active',
-      managerId: 'mgr_eu_992'
-    },
-    {
-      id: 'proj_tokyo_metro',
-      name: 'Tokyo Metro Extension Line 4',
-      hiltiProjectId: 'HILTI-JP-990B',
-      status: 'completed',
-      managerId: 'mgr_jp_014'
-    },
-    {
-      id: 'proj_seattle_tower',
-      name: 'Seattle Skyline Residential',
-      hiltiProjectId: 'HILTI-US-102C',
-      status: 'archived',
-      managerId: 'mgr_us_331'
-    },
-    {
-      id: 'proj_dubai_marina',
-      name: 'Dubai Marina Subsea Pipeline',
-      hiltiProjectId: 'HILTI-AE-501',
-      status: 'completed',
-      managerId: 'mgr_ae_007'
-    }
+    { id: 'proj_kl_tun_razak',    name: 'KL Tun Razak Exchange Tower',      hiltiProjectId: 'HILTI-MY-KL-001', status: 'active',    managerId: 'mgr_my_kl_01' },
+    { id: 'proj_penang_bridge',   name: 'Penang Second Bridge Widening',     hiltiProjectId: 'HILTI-MY-PNG-002', status: 'completed', managerId: 'mgr_my_png_02' },
+    { id: 'proj_jb_iskandar',     name: 'Johor Bahru Iskandar Smart Hub',    hiltiProjectId: 'HILTI-MY-JB-003',  status: 'archived',  managerId: 'mgr_my_jb_03' },
+    { id: 'proj_putrajaya_civic', name: 'Putrajaya Civic Centre Expansion',  hiltiProjectId: 'HILTI-MY-PJ-004',  status: 'completed', managerId: 'mgr_my_pj_04' },
   ];
 
-  // Write Projects
   for (const p of projects) {
     const { id, ...data } = p;
     await setDoc(doc(db, 'projects', id), {
@@ -67,47 +53,54 @@ async function seed() {
       updatedAt: new Date()
     });
   }
+  console.log('✓ Projects seeded');
 
-  // Define heavily-costing resources
+  // MYR-priced cloud resources (1 USD ≈ 4.72 MYR)
   const resources = [
-    // Tokyo Metro Resources (Completed)
-    { projectId: 'proj_tokyo_metro', name: 'RDS-Tokyo-Substation-Telemetry', provider: 'aws', resourceType: 'rds', resourceTag: 'db-tokyo-992a', region: 'ap-northeast-1', energyKwhPerDay: 45.2, monthlyCostUSD: 1450.00 },
-    { projectId: 'proj_tokyo_metro', name: 'EC2-BIM-Cluster-Node-01', provider: 'aws', resourceType: 'ec2', resourceTag: 'i-0ab111cd', region: 'ap-northeast-1', energyKwhPerDay: 18.5, monthlyCostUSD: 520.00 },
-    { projectId: 'proj_tokyo_metro', name: 'EC2-BIM-Cluster-Node-02', provider: 'aws', resourceType: 'ec2', resourceTag: 'i-0ab222ef', region: 'ap-northeast-1', energyKwhPerDay: 18.5, monthlyCostUSD: 520.00 },
-    { projectId: 'proj_tokyo_metro', name: 'S3-GeoSpatial-Archive', provider: 'aws', resourceType: 's3', resourceTag: 'arn:aws:s3:::tokyo-geospatial', region: 'ap-northeast-1', energyKwhPerDay: 4.1, monthlyCostUSD: 180.00 },
-    
-    // Seattle Tower Resources (Archived)
-    { projectId: 'proj_seattle_tower', name: 'Azure-SQL-Seattle-BIM', provider: 'azure', resourceType: 'database', resourceTag: 'sql-seattle-001', region: 'us-west-2', energyKwhPerDay: 32.8, monthlyCostUSD: 980.50 },
-    { projectId: 'proj_seattle_tower', name: 'Azure-VM-Render-Farm-01', provider: 'azure', resourceType: 'vm', resourceTag: 'vm-seattle-001', region: 'us-west-2', energyKwhPerDay: 56.4, monthlyCostUSD: 2150.00 },
-    
-    // Dubai Marina Resources (Completed)
-    { projectId: 'proj_dubai_marina', name: 'GCP-Spanner-Pipeline-Data', provider: 'gcp', resourceType: 'database', resourceTag: 'spanner-dubai-data', region: 'me-central1', energyKwhPerDay: 88.0, monthlyCostUSD: 3400.00 },
-    { projectId: 'proj_dubai_marina', name: 'GCP-Compute-Sonar-Analysis', provider: 'gcp', resourceType: 'vm', resourceTag: 'vm-sonar-001', region: 'me-central1', energyKwhPerDay: 112.5, monthlyCostUSD: 4100.00 },
-    { projectId: 'proj_dubai_marina', name: 'GCP-CloudStorage-Acoustics', provider: 'gcp', resourceType: 'storage', resourceTag: 'bucket-acoustics-log', region: 'me-central1', energyKwhPerDay: 1.2, monthlyCostUSD: 45.00 },
+    // Penang Bridge (Completed) — AWS ap-southeast-1
+    { projectId: 'proj_penang_bridge', name: 'RDS-Penang-Structural-Telemetry', provider: 'aws', resourceType: 'rds',      resourceTag: 'db-png-struct-01',              region: 'ap-southeast-1',  energyKwhPerDay: 45.2,  monthlyCostMYR: 6840.00 },
+    { projectId: 'proj_penang_bridge', name: 'EC2-BIM-Render-Node-01',          provider: 'aws', resourceType: 'ec2',      resourceTag: 'i-0png1111aa',                  region: 'ap-southeast-1',  energyKwhPerDay: 18.5,  monthlyCostMYR: 2454.00 },
+    { projectId: 'proj_penang_bridge', name: 'EC2-BIM-Render-Node-02',          provider: 'aws', resourceType: 'ec2',      resourceTag: 'i-0png2222bb',                  region: 'ap-southeast-1',  energyKwhPerDay: 18.5,  monthlyCostMYR: 2454.00 },
+    { projectId: 'proj_penang_bridge', name: 'S3-GeoSpatial-Survey-Archive',    provider: 'aws', resourceType: 's3',       resourceTag: 'arn:aws:s3:::penang-survey',     region: 'ap-southeast-1',  energyKwhPerDay: 3.8,   monthlyCostMYR: 849.00 },
 
-    // Frankfurt HQ (Active)
-    { projectId: 'proj_frankfurt_hq', name: 'AWS-EKS-Main-Cluster', provider: 'aws', resourceType: 'eks', resourceTag: 'eks-frankfurt-prod', region: 'eu-central-1', energyKwhPerDay: 145.0, monthlyCostUSD: 5800.00 },
-    { projectId: 'proj_frankfurt_hq', name: 'AWS-RDS-Postgres-HQ', provider: 'aws', resourceType: 'rds', resourceTag: 'rds-frankfurt-prod', region: 'eu-central-1', energyKwhPerDay: 62.4, monthlyCostUSD: 1950.00 }
+    // Johor Bahru Smart Hub (Archived) — Azure
+    { projectId: 'proj_jb_iskandar',   name: 'Azure-SQL-Iskandar-BIM-DB',      provider: 'azure', resourceType: 'database', resourceTag: 'sql-jb-iskandar-01',           region: 'southeastasia',    energyKwhPerDay: 32.8,  monthlyCostMYR: 4626.00 },
+    { projectId: 'proj_jb_iskandar',   name: 'Azure-VM-SmartCity-Analytics',   provider: 'azure', resourceType: 'vm',       resourceTag: 'vm-jb-analytics-01',           region: 'southeastasia',    energyKwhPerDay: 56.4,  monthlyCostMYR: 10148.00 },
+    { projectId: 'proj_jb_iskandar',   name: 'Azure-Blob-CCTV-Archive',        provider: 'azure', resourceType: 'storage',  resourceTag: 'blob-jb-cctv-archive',         region: 'southeastasia',    energyKwhPerDay: 8.2,   monthlyCostMYR: 1180.00 },
+
+    // Putrajaya Civic Centre (Completed) — GCP
+    { projectId: 'proj_putrajaya_civic', name: 'GCP-Spanner-Civic-Records-DB',   provider: 'gcp', resourceType: 'database', resourceTag: 'spanner-pj-civic-01',          region: 'asia-southeast1',  energyKwhPerDay: 88.0,  monthlyCostMYR: 16048.00 },
+    { projectId: 'proj_putrajaya_civic', name: 'GCP-Compute-3D-Visualisation',   provider: 'gcp', resourceType: 'vm',       resourceTag: 'vm-pj-3drender-01',            region: 'asia-southeast1',  energyKwhPerDay: 112.5, monthlyCostMYR: 19352.00 },
+    { projectId: 'proj_putrajaya_civic', name: 'GCP-Storage-Blueprint-Archive',  provider: 'gcp', resourceType: 'storage',  resourceTag: 'bucket-pj-blueprints',         region: 'asia-southeast1',  energyKwhPerDay: 1.4,   monthlyCostMYR: 212.00 },
+
+    // KL Tun Razak Exchange (Active) — AWS
+    { projectId: 'proj_kl_tun_razak',   name: 'AWS-EKS-TRX-Main-Cluster',      provider: 'aws', resourceType: 'eks',      resourceTag: 'eks-kl-trx-prod',              region: 'ap-southeast-1',  energyKwhPerDay: 145.0, monthlyCostMYR: 27376.00 },
+    { projectId: 'proj_kl_tun_razak',   name: 'AWS-RDS-TRX-Postgres-Master',   provider: 'aws', resourceType: 'rds',      resourceTag: 'rds-kl-trx-master',            region: 'ap-southeast-1',  energyKwhPerDay: 62.4,  monthlyCostMYR: 9204.00 },
+    { projectId: 'proj_kl_tun_razak',   name: 'AWS-Lambda-IoT-Sensor-Stream',  provider: 'aws', resourceType: 'lambda',   resourceTag: 'lambda-kl-iot-stream',         region: 'ap-southeast-1',  energyKwhPerDay: 4.6,   monthlyCostMYR: 1132.00 },
   ];
 
   for (const r of resources) {
     await addDoc(collection(db, 'cloudResources'), {
-      ...r, 
+      ...r,
       status: 'active',
-      reapedAt: null, 
-      reapedBy: null, 
+      reapedAt: null,
+      reapedBy: null,
       lastActiveAt: new Date(),
       createdAt: new Date()
     });
   }
+  console.log('✓ Cloud resources seeded');
 
   await setDoc(doc(db, 'reapSummary', 'global'), {
-    totalResourcesReaped: 0, totalEnergySavedKwh: 0,
-    totalCostSavedUSD: 0, totalCarbonSavedKg: 0,
+    totalResourcesReaped: 0,
+    totalEnergySavedKwh: 0,
+    totalCostSavedMYR: 0,
+    totalCarbonSavedKg: 0,
     lastUpdated: new Date()
   });
+  console.log('✓ Summary reset');
 
-  console.log('Mock data seeded to Firebase successfully!');
+  console.log('🎉 Malaysian project data seeded to Firebase successfully!');
   process.exit(0);
 }
 

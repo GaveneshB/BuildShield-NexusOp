@@ -470,6 +470,7 @@ export default function App() {
         const data = docSnap.data()
         if (data.shiftStart !== undefined) setShiftStart(data.shiftStart)
         if (data.shiftEnd !== undefined) setShiftEnd(data.shiftEnd)
+        if (data.isActive !== undefined) setLightsOut(data.isActive)
         triggerToast("Shift schedule synced with Cloud Platforms", "success")
       }
     }, (err) => console.log("Lights out listener error:", err))
@@ -722,6 +723,8 @@ export default function App() {
               co2SavedDaily={co2SavedDaily}
               totalReclaimedCost={totalReclaimedCost}
               lightsOut={lightsOut}
+              shiftStart={shiftStart}
+              shiftEnd={shiftEnd}
               cureResolved={cureResolved}
               projects={projects}
               subs={subs}
@@ -804,6 +807,8 @@ function DashboardView({
   co2SavedDaily,
   totalReclaimedCost,
   lightsOut,
+  shiftStart,
+  shiftEnd,
   cureResolved,
   projects,
   subs,
@@ -1259,6 +1264,17 @@ function LightsOutPage({
 }) {
   const [syncing, setSyncing] = useState(false)
 
+  // Pre-configured global jobsite servers with localized shift recommendations
+  const [servers] = useState([
+    { id: 'ap-southeast-1', location: 'Alor Gajah, Malaysia (AP-South)', tz: 'MYT (UTC+8)', suggestedStart: 8, suggestedEnd: 18 },
+    { id: 'ap-southeast-2', location: 'Singapore (AP-South)', tz: 'SGT (UTC+8)', suggestedStart: 8, suggestedEnd: 18 },
+    { id: 'us-east-1', location: 'New York, USA (US-East)', tz: 'EST (UTC-5)', suggestedStart: 7, suggestedEnd: 17 },
+    { id: 'eu-central-1', location: 'Frankfurt, Germany (EU-Central)', tz: 'CET (UTC+1)', suggestedStart: 7, suggestedEnd: 16 }
+  ])
+  
+  const [selectedServerId, setSelectedServerId] = useState(servers[0].id)
+  const activeServer = useMemo(() => servers.find(s => s.id === selectedServerId) || servers[0], [servers, selectedServerId])
+
   const barChartData = useMemo(() => {
     return Array.from({ length: 24 }, (_, i) => ({
       hour: i,
@@ -1266,6 +1282,12 @@ function LightsOutPage({
       label: `${String(i).padStart(2, '0')}:00`
     }))
   }, [shiftStart, shiftEnd])
+
+  const applySuggestion = () => {
+    setShiftStart(activeServer.suggestedStart)
+    setShiftEnd(activeServer.suggestedEnd)
+    triggerToast(`Applied suggested local shift times for ${activeServer.location}`, "info")
+  }
 
   const handleSyncCloud = () => {
     setSyncing(true)
@@ -1281,6 +1303,9 @@ function LightsOutPage({
           setDoc(doc(db, `artifacts/${APP_ID}/lightsOut/current`), {
             shiftStart: shiftStart,
             shiftEnd: shiftEnd,
+            isActive: true,
+            timezone: activeServer.tz,
+            serverId: selectedServerId,
             updatedAt: Date.now()
           }).catch(e => console.error("Firebase save lights out error:", e))
         } catch (e) {
@@ -1288,7 +1313,7 @@ function LightsOutPage({
         }
       }
       
-      triggerToast("Jobsite shift schedule synchronized and active!", "success")
+      triggerToast(`Regional policy enforced! Server synced to ${activeServer.tz}.`, "success")
     }, 1500)
   }
 
@@ -1299,41 +1324,93 @@ function LightsOutPage({
       <div className="space-y-2">
         <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">💡 Jobsite "Lights Out" Protocol</h2>
         <p className="text-slate-500 dark:text-slate-400 text-sm">
-          Limits dev/staging cloud resources strictly to active construction shift schedules.
+          Automates cloud resource states based on the physical jobsite's regional timezone, preventing out-of-state schedule conflicts.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Scheduler Controls */}
-        <div className="lg:col-span-1 p-6 rounded-2xl border border-slate-200 dark:border-slate-200 bg-white/80 backdrop-blur-md shadow-sm space-y-6">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Configure Shift Schedule</h3>
+        <div className="lg:col-span-1 p-6 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Regional Server Config</h3>
+            <p className="text-xs text-slate-400">Automated shift control by country server.</p>
+          </div>
           
           <div className="space-y-4">
             <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-600 dark:text-slate-500 mb-1.5">Shift Uptime Starts</label>
+              <label className="text-xs font-bold text-slate-600 mb-1.5">Target Jobsite Server</label>
               <select
-                value={shiftStart}
-                onChange={(e) => setShiftStart(Number(e.target.value))}
-                className="px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-300 bg-slate-50/50 text-sm font-semibold outline-none focus:border-rose-300 transition-colors"
+                value={selectedServerId}
+                onChange={(e) => setSelectedServerId(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none focus:border-rose-300 transition-colors text-slate-700"
               >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i}>{formatHourString(i)}</option>
+                {servers.map(s => (
+                  <option key={s.id} value={s.id}>{s.location}</option>
                 ))}
               </select>
             </div>
 
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-slate-600 dark:text-slate-500 mb-1.5">Shift Uptime Ends</label>
-              <select
-                value={shiftEnd}
-                onChange={(e) => setShiftEnd(Number(e.target.value))}
-                className="px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-300 bg-slate-50/50 text-sm font-semibold outline-none focus:border-rose-300 transition-colors"
-              >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i}>{formatHourString(i)}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-600 mb-1.5">Shift Start</label>
+                <select
+                  value={shiftStart}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    if (val < shiftEnd) {
+                      setShiftStart(val);
+                    } else {
+                      triggerToast("Shift start must be earlier than shift end", "warning");
+                    }
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none focus:border-rose-300 transition-colors text-slate-700"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{formatHourString(i)}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-bold text-slate-600 mb-1.5">Shift End</label>
+                <select
+                  value={shiftEnd}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    if (val > shiftStart) {
+                      setShiftEnd(val);
+                    } else {
+                      triggerToast("Shift end must be later than shift start", "warning");
+                    }
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none focus:border-rose-300 transition-colors text-slate-700"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{formatHourString(i)}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+
+            <div className="bg-slate-50/50 border border-slate-100 p-3.5 rounded-xl space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-medium">Timezone</span>
+                <span className="font-bold text-slate-700">{activeServer.tz}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-medium">Suggested Shift</span>
+                <span className="font-bold text-teal-500">
+                  {formatHourString(activeServer.suggestedStart)} - {formatHourString(activeServer.suggestedEnd)}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={applySuggestion}
+              className="w-full py-2.5 text-xs font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors border border-rose-200"
+            >
+              Apply Regional Suggestion
+            </button>
 
             <button
               onClick={handleSyncCloud}
@@ -1347,10 +1424,10 @@ function LightsOutPage({
               {syncing ? (
                 <>
                   <IconRefresh className="w-5 h-5 animate-spin" />
-                  <span>Syncing Calendar Registry...</span>
+                  <span>Syncing Registry...</span>
                 </>
               ) : (
-                <span>Sync Shift Schedule</span>
+                <span>Enforce Regional Policy</span>
               )}
             </button>
 
@@ -1359,11 +1436,25 @@ function LightsOutPage({
                 onClick={() => {
                   setLightsOut(false)
                   localStorage.setItem('lightsOutActive', 'false')
-                  triggerToast("Shift limits deactivated. Uptime set to unrestricted (24/7).", "warning")
+                  if (isFirebaseReady && db) {
+                    try {
+                      setDoc(doc(db, `artifacts/${APP_ID}/lightsOut/current`), {
+                        shiftStart: shiftStart,
+                        shiftEnd: shiftEnd,
+                        isActive: false,
+                        timezone: activeServer.tz,
+                        serverId: selectedServerId,
+                        updatedAt: Date.now()
+                      }).catch(e => console.error("Firebase save lights out error:", e))
+                    } catch (e) {
+                      console.warn("Firestore sync failed:", e)
+                    }
+                  }
+                  triggerToast("Regional schedule disabled. Uptime set to unrestricted (24/7).", "warning")
                 }}
                 className="w-full py-2.5 text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors"
               >
-                Disable Schedule Limitations
+                Disable Regional Schedule
               </button>
             )}
           </div>
