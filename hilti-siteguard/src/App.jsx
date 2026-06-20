@@ -165,6 +165,36 @@ export default function App() {
     }
   })
 
+  const [totalCarbonSaved, setTotalCarbonSaved] = useState(() => {
+    try {
+      const val = localStorage.getItem('total_carbon_saved')
+      return val ? Number(val) : 0
+    } catch {
+      return 0
+    }
+  })
+  const [totalCapitalSaved, setTotalCapitalSaved] = useState(() => {
+    try {
+      const val = localStorage.getItem('total_capital_saved')
+      return val ? Number(val) : 0
+    } catch {
+      return 0
+    }
+  })
+
+  const addSavedMetrics = (co2, money) => {
+    setTotalCarbonSaved(prev => {
+      const next = prev + co2
+      localStorage.setItem('total_carbon_saved', String(next))
+      return next
+    })
+    setTotalCapitalSaved(prev => {
+      const next = prev + money
+      localStorage.setItem('total_capital_saved', String(next))
+      return next
+    })
+  }
+
   // Toast notifications state
   const [toasts, setToasts] = useState([])
   const triggerToast = (message, type = 'info') => {
@@ -651,11 +681,18 @@ export default function App() {
               saveProjects={saveProjects}
               saveSubs={saveSubs}
               getScore={getScore}
+              totalCarbonSaved={totalCarbonSaved}
+              totalCapitalSaved={totalCapitalSaved}
             />
           )}
 
           {activePage === 'debt-clock' && (
-            <CarbonDebtClock />
+            <CarbonDebtClock
+              triggerToast={triggerToast}
+              totalCarbonSaved={totalCarbonSaved}
+              totalCapitalSaved={totalCapitalSaved}
+              addSavedMetrics={addSavedMetrics}
+            />
           )}
 
           {activePage === 'lights-out' && (
@@ -707,6 +744,21 @@ export default function App() {
 /* -------------------------------------------------------------
  * 1. CENTRAL DASHBOARD VIEW
  * ------------------------------------------------------------- */
+
+// Carbon constants matching CarbonDebtClock server list
+const DASH_SERVERS = [
+  { id: 'sv-01', gridIntensity: 415, powerW: 320, status: 'critical' },
+  { id: 'sv-02', gridIntensity: 415, powerW: 310, status: 'critical' },
+  { id: 'sv-03', gridIntensity: 185, powerW: 280, status: 'warning'  },
+  { id: 'sv-04', gridIntensity: 185, powerW: 275, status: 'warning'  },
+  { id: 'sv-05', gridIntensity: 210, powerW: 200, status: 'warning'  },
+  { id: 'sv-06', gridIntensity: 210, powerW: 180, status: 'warning'  },
+  { id: 'sv-07', gridIntensity: 415, powerW: 450, status: 'warning'  },
+  { id: 'sv-08', gridIntensity: 120, powerW: 420, status: 'ok'       },
+  { id: 'sv-09', gridIntensity: 440, powerW: 150, status: 'ok'       },
+  { id: 'sv-10', gridIntensity: 415, powerW: 500, status: 'critical' },
+];
+
 function DashboardView({
   complianceScore,
   carbonDebt,
@@ -723,7 +775,9 @@ function DashboardView({
   triggerToast,
   saveProjects,
   saveSubs,
-  getScore
+  getScore,
+  totalCarbonSaved,
+  totalCapitalSaved
 }) {
   const getSubColor = (s) => s > 80 ? 'bg-teal-400' : s >= 50 ? 'bg-orange-300' : 'bg-rose-400'
   const activeLeakedCost = projects.filter(p => !p.reaped).reduce((acc, p) => acc + p.cost, 0)
@@ -760,11 +814,11 @@ function DashboardView({
         <div className="space-y-2 z-10">
           <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">Hilti Jobsite Cloud Operations</h2>
           <p className="text-slate-500 max-w-xl text-sm">
-            Bridging the physical construction lifecycles with secure, energy-aware virtual environments.
+            Bridging the physical construction lifecycle with secure, energy-aware virtual environments.
           </p>
         </div>
         
-        {/* Large Compliance Dial Widget */}
+        {/* Compliance Dial Widget */}
         <div className="flex items-center gap-4 bg-white/60 backdrop-blur-md p-4 rounded-xl border border-white/80 z-10 shrink-0">
           <div className="relative flex items-center justify-center">
             <svg className="w-16 h-16 transform -rotate-90">
@@ -787,111 +841,77 @@ function DashboardView({
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Compliance Index</p>
             <p className="text-sm font-bold text-slate-700">
-              {complianceScore > 80 ? '🔒 Cloud Secure' : complianceScore >= 50 ? '⚠️ Advisory Level' : '🚨 Breach Risk Alert'}
+              {complianceScore > 80 ? 'Cloud Secure' : complianceScore >= 50 ? 'Advisory Level' : 'Breach Risk Alert'}
+            </p>
+            <p className={`text-[10px] font-semibold mt-0.5 ${
+              complianceScore > 80 ? 'text-teal-500' : complianceScore >= 50 ? 'text-orange-400' : 'text-rose-500'
+            }`}>
+              {complianceScore > 80 ? 'All controls in good standing' : complianceScore >= 50 ? 'Review recommended' : 'Immediate action needed'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Top Level Real-Time KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* KPI 1: Carbon Debt */}
-        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 shadow-sm shadow-rose-100">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Carbon Debt</span>
-            <div className="p-1.5 bg-rose-100 rounded-lg text-rose-500">
-              <IconClock className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <p className="text-3xl font-mono font-bold text-rose-500">
-              {carbonDebt.toFixed(2)}
-            </p>
-            <span className="text-xs text-slate-400">kg CO2 accumulated</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-rose-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 active-pulse" />
-            <span>Active Rate: {lightsOut && cureResolved ? '0.01x' : lightsOut || !cureResolved ? 'Scaled' : '1.00x'} base</span>
-          </div>
-        </div>
-
-        {/* KPI 2: Financial Waste */}
-        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 shadow-sm shadow-orange-100">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Financial Waste</span>
-            <div className="p-1.5 bg-orange-100 rounded-lg text-orange-500">
-              <IconDatabase className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <p className="text-3xl font-mono font-bold text-orange-400">
-              RM{financialDebt.toFixed(2)}
-            </p>
-            <span className="text-xs text-slate-400">Unoptimized cloud costs</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-orange-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 active-pulse" />
-            <span>Accumulating...</span>
-          </div>
-        </div>
-
-        {/* KPI 3: Carbon Savings (Daily) */}
-        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 shadow-sm shadow-teal-100">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Daily Carbon Saved</span>
-            <div className="p-1.5 bg-teal-100 rounded-lg text-teal-500">
-              <IconSun className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <p className="text-3xl font-mono font-bold text-teal-500 dark:text-teal-400">
-              {lightsOut ? co2SavedDaily.toFixed(1) : '0.0'}
-            </p>
-            <span className="text-xs text-slate-400">kg CO2 prevented today</span>
-          </div>
-          <p className="text-xs text-slate-400">
-            {lightsOut ? '💡 Lights Out Protocol Active' : '⏸️ Shift limits bypassed'}
-          </p>
-        </div>
-
-        {/* KPI 4: Costs Reclaimed */}
-        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 shadow-sm shadow-indigo-100">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Reclaimed Capital</span>
-            <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-500">
-              <IconGhost className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <p className="text-3xl font-mono font-bold text-indigo-500 dark:text-indigo-400">
-              RM{totalReclaimedCost.toFixed(2)}
-            </p>
-            <span className="text-xs text-slate-400">Total costs reaped</span>
-          </div>
-          <p className="text-xs text-slate-400">
-            {projects.filter(p => !p.reaped).length} completed projects leak cost
-          </p>
-        </div>
+      {/* KPI Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <DashKpi
+          label="Daily CO2 Output"
+          value={`${DASH_SERVERS.reduce((s, sv) => s + sv.powerW * 24 * sv.gridIntensity / 1000000, 0).toFixed(1)} kg`}
+          sub="from all servers today"
+          subColor="text-rose-400"
+          icon={<IconClock className="w-4 h-4" />}
+          iconBg="bg-rose-100 text-rose-500"
+          accent="rose"
+        />
+        <DashKpi
+          label="Servers Need Action"
+          value={`${DASH_SERVERS.filter(s => s.status !== 'ok').length} / ${DASH_SERVERS.length}`}
+          sub={`${DASH_SERVERS.filter(s => s.status === 'critical').length} critical · ${DASH_SERVERS.filter(s => s.status === 'warning').length} inefficient`}
+          subColor="text-amber-400"
+          icon={<IconAlert className="w-4 h-4" />}
+          iconBg="bg-amber-100 text-amber-500"
+          accent="amber"
+        />
+        <DashKpi
+          label="Total CO2 Prevented"
+          value={`${((lightsOut ? co2SavedDaily : 0) + totalCarbonSaved).toFixed(1)} kg`}
+          sub={`AI actions: ${totalCarbonSaved.toFixed(1)} kg · Shift: ${(lightsOut ? co2SavedDaily : 0).toFixed(1)} kg`}
+          subColor="text-teal-500"
+          icon={<IconSun className="w-4 h-4" />}
+          iconBg="bg-teal-100 text-teal-500"
+          accent="teal"
+        />
+        <DashKpi
+          label="Capital Reclaimed"
+          value={`RM ${(totalReclaimedCost + totalCapitalSaved).toFixed(2)}`}
+          sub={`AI savings: RM ${totalCapitalSaved.toFixed(2)}`}
+          subColor="text-indigo-400"
+          icon={<IconDatabase className="w-4 h-4" />}
+          iconBg="bg-indigo-100 text-indigo-500"
+          accent="indigo"
+        />
       </div>
 
-      {/* Quick Enforcements Panel */}
+      {/* Quick Actions */}
       <div className="p-5 rounded-2xl border border-white/60 bg-white/60 backdrop-blur-xl shadow-sm space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">Operations Command Center</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Quick Actions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <button
             onClick={reclaimAllLeaks}
-            className="flex items-center justify-between p-4 rounded-xl border border-rose-200 bg-rose-50 backdrop-blur-sm hover:bg-rose-100 text-rose-600 font-bold transition text-left group"
+            className="flex items-center justify-between p-4 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold transition text-left group"
           >
             <div>
-              <p className="text-sm">Batch Reclaim Phantom Leaks</p>
-              <span className="text-xs text-rose-400 font-normal">Reclaim ${activeLeakedCost.toFixed(2)} cost & {activeCarbonLeak.toFixed(1)} kg CO2 daily</span>
+              <p className="text-sm">Reclaim All Phantom Leaks</p>
+              <span className="text-xs text-rose-400 font-normal">
+                RM {activeLeakedCost.toFixed(2)} · {activeCarbonLeak.toFixed(1)} kg CO2/day
+              </span>
             </div>
             <IconGhost className="w-5 h-5 shrink-0 group-hover:scale-110 transition-transform" />
           </button>
 
           <button
             onClick={forceEnforceCompliance}
-            className="flex items-center justify-between p-4 rounded-xl border border-teal-200 bg-teal-50 backdrop-blur-sm hover:bg-teal-100 text-teal-600 font-bold transition text-left group"
+            className="flex items-center justify-between p-4 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-600 font-bold transition text-left group"
           >
             <div>
               <p className="text-sm">Enforce Contractor Access</p>
@@ -905,7 +925,7 @@ function DashboardView({
               setActivePage('chaos-cure')
               triggerToast("Routing to Zero-Day Exploit simulator", "info")
             }}
-            className="flex items-center justify-between p-4 rounded-xl border border-orange-200 bg-orange-50 backdrop-blur-sm hover:bg-orange-100 text-orange-600 font-bold transition text-left group"
+            className="flex items-center justify-between p-4 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold transition text-left group"
           >
             <div>
               <p className="text-sm">Launch Zero-Day Simulator</p>
@@ -916,63 +936,86 @@ function DashboardView({
         </div>
       </div>
 
-      {/* Feature Navigation Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Lights Out Quick Widget */}
-        <div
-          onClick={() => setActivePage('lights-out')}
-          className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 cursor-pointer group shadow-sm transition hover:shadow-md"
-        >
-          <div className="flex justify-between items-center">
-            <h3 className="text-base font-bold text-slate-700 group-hover:text-rose-400 transition-colors">
-              💡 Lights Out Schedule
-            </h3>
-            <IconChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
-          </div>
-          <p className="text-xs text-slate-500">
-            Pause dev/staging instances during non-working jobsite shifts.
-          </p>
-          <div className="bg-white/60 backdrop-blur-sm p-3 rounded-lg border border-white/80 flex justify-between items-center text-xs">
-            <div>
-              <p className="font-semibold text-slate-500">Active Shift Hours</p>
-              <p className="font-bold text-sm text-slate-700">{lightsOut ? `${shiftStart}:00 - ${shiftEnd}:00` : 'Disabled (Bypassed)'}</p>
-            </div>
-            <div>
-              <p className="font-semibold text-slate-500 text-right">Daily Prevention</p>
-              <p className="font-bold text-teal-500 text-sm text-right">-{co2SavedDaily.toFixed(1)} kg CO2</p>
-            </div>
-          </div>
-        </div>
+      {/* Bottom two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sortable Phantom Leaks Table */}
+        <PhantomLeaksTable
+          projects={projects}
+          saveProjects={saveProjects}
+          triggerToast={triggerToast}
+          setActivePage={setActivePage}
+        />
 
-        {/* Subcontractor Trust Quick Widget */}
-        <div
-          onClick={() => setActivePage('trust-score')}
-          className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 cursor-pointer group shadow-sm transition hover:shadow-md"
-        >
-          <div className="flex justify-between items-center">
-            <h3 className="text-base font-bold text-slate-700 group-hover:text-rose-400 transition-colors">
-              👥 Subcontractor Trust Status
-            </h3>
-            <IconChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
+        {/* Right column: Lights Out + Trust Score widgets */}
+        <div className="space-y-5">
+          <div
+            onClick={() => setActivePage('lights-out')}
+            className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 cursor-pointer group shadow-sm transition hover:shadow-md"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-700 group-hover:text-rose-400 transition-colors">Lights Out Schedule</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Auto-pause servers outside shift hours</p>
+              </div>
+              <IconChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/60 rounded-xl border border-white/80 p-3">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Status</p>
+                <p className={`text-sm font-bold mt-0.5 ${lightsOut ? 'text-teal-600' : 'text-slate-400'}`}>
+                  {lightsOut ? 'Active' : 'Disabled'}
+                </p>
+              </div>
+              <div className="bg-white/60 rounded-xl border border-white/80 p-3">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Shift Hours</p>
+                <p className="text-sm font-bold text-slate-700 mt-0.5">
+                  {lightsOut ? `${String(shiftStart).padStart(2,'0')}:00 – ${String(shiftEnd).padStart(2,'0')}:00` : '—'}
+                </p>
+              </div>
+              <div className="bg-white/60 rounded-xl border border-white/80 p-3 col-span-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">CO2 Prevented per Day</p>
+                <p className="text-base font-bold text-teal-600 font-mono mt-0.5">
+                  {lightsOut ? `${co2SavedDaily.toFixed(1)} kg` : '0.0 kg (inactive)'}
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-slate-500">
-            Monitor real-time network traffic and trust telemetry.
-          </p>
-          <div className="space-y-2">
-            {subs.slice(0, 2).map(s => {
-              const scoreVal = getScore(s.downloads, s.hours)
-              return (
-                <div key={s.id} className="flex items-center justify-between text-xs p-1">
-                  <span className="font-medium text-slate-600">{s.name}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                      <div className={`h-full ${getSubColor(scoreVal)}`} style={{ width: `${scoreVal}%` }} />
+
+          <div
+            onClick={() => setActivePage('trust-score')}
+            className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 cursor-pointer group shadow-sm transition hover:shadow-md"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-700 group-hover:text-rose-400 transition-colors">Subcontractor Trust</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Cloud access by trust score</p>
+              </div>
+              <IconChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
+            </div>
+            <div className="space-y-3">
+              {subs.slice(0, 4).map(s => {
+                const scoreVal = getScore(s.downloads, s.hours)
+                const barColor = scoreVal > 80 ? 'bg-teal-400' : scoreVal >= 50 ? 'bg-orange-300' : 'bg-rose-400'
+                const textColor = scoreVal > 80 ? 'text-teal-600' : scoreVal >= 50 ? 'text-orange-500' : 'text-rose-500'
+                return (
+                  <div key={s.id} className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-slate-600 w-28 truncate shrink-0">{s.name}</span>
+                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${scoreVal}%` }} />
                     </div>
-                    <span className="font-bold text-slate-700">{scoreVal}%</span>
+                    <span className={`text-xs font-bold w-8 text-right shrink-0 ${textColor}`}>{scoreVal}%</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                      s.accessStatus === 'Granted' ? 'bg-teal-100 text-teal-600' : 'bg-rose-100 text-rose-600'
+                    }`}>
+                      {s.accessStatus}
+                    </span>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+              {subs.length > 4 && (
+                <p className="text-xs text-slate-400 text-right">+{subs.length - 4} more — view all</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -980,176 +1023,160 @@ function DashboardView({
   )
 }
 
-/* -------------------------------------------------------------
- * 2. CARBON & SECURITY DEBT CLOCK PAGE
- * ------------------------------------------------------------- */
-function DebtClockPage({
-  carbonDebt,
-  financialDebt,
-  userCarbonRate,
-  setUserCarbonRate,
-  userFinRate,
-  setUserFinRate,
-  currentCarbonRate,
-  currentFinRate,
-  lightsOut,
-  cureResolved
-}) {
-  // Generate forecasting data based on rates
-  const projectionData = useMemo(() => {
-    const data = []
-    const baseCarbon = carbonDebt
-    for (let hour = 0; hour <= 24; hour += 4) {
-      const rateBAU = userCarbonRate
-      const rateLightsOut = userCarbonRate * (lightsOut ? 0.3 : 1.0)
-      const rateOpt = userCarbonRate * 0.01
-      
-      data.push({
-        name: `+${hour}h`,
-        BAU: Math.round(baseCarbon + rateBAU * hour * 3600),
-        'Shift Control': Math.round(baseCarbon + rateLightsOut * hour * 3600),
-        'AI Optimized': Math.round(baseCarbon + rateOpt * hour * 3600),
-      })
+/* ── Reusable KPI card for dashboard ── */
+function DashKpi({ label, value, sub, subColor, icon, iconBg, accent }) {
+  const accentShadows = {
+    rose:   'shadow-rose-100',
+    amber:  'shadow-amber-100',
+    teal:   'shadow-teal-100',
+    indigo: 'shadow-indigo-100',
+  }
+  const valueColors = {
+    rose:   'text-rose-500',
+    amber:  'text-amber-500',
+    teal:   'text-teal-500',
+    indigo: 'text-indigo-500',
+  }
+  return (
+    <div className={`bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 shadow-sm ${accentShadows[accent] ?? ''} flex flex-col gap-3`}>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">{label}</span>
+        <div className={`p-1.5 rounded-lg ${iconBg}`}>{icon}</div>
+      </div>
+      <div>
+        <p className={`text-2xl font-mono font-bold ${valueColors[accent]}`}>{value}</p>
+        <p className={`text-xs mt-1 ${subColor ?? 'text-slate-400'}`}>{sub}</p>
+      </div>
+    </div>
+  )
+}
+
+/* ── Sortable Phantom Leaks table ── */
+function PhantomLeaksTable({ projects, saveProjects, triggerToast, setActivePage }) {
+  const [sortKey, setSortKey] = useState('co2')
+  const [sortDir, setSortDir] = useState('desc')
+  const [filter, setFilter] = useState('all')
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir('desc')
     }
-    return data
-  }, [carbonDebt, userCarbonRate, lightsOut])
+  }
+
+  const displayedProjects = useMemo(() => {
+    let list = [...projects]
+    if (filter === 'active') list = list.filter(p => !p.reaped)
+    if (filter === 'reaped') list = list.filter(p => p.reaped)
+    list.sort((a, b) => {
+      const av = a[sortKey], bv = b[sortKey]
+      if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+      return sortDir === 'asc' ? av - bv : bv - av
+    })
+    return list
+  }, [projects, filter, sortKey, sortDir])
+
+  const reclaimOne = (project) => {
+    const updated = projects.map(p => p.id === project.id ? { ...p, reaped: true } : p)
+    saveProjects(updated)
+    triggerToast(`Reclaimed: ${project.name}`, 'success')
+  }
+
+  const SortIcon = ({ col }) => {
+    if (sortKey !== col) return <span className="text-slate-300 ml-1">↕</span>
+    return <span className="text-rose-400 ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>
+  }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="space-y-2">
-        <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">⏱️ Carbon & Security Debt Clock</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">
-          Calculates ongoing environmental emissions and financial overhead generated by inactive servers and unmitigated security exploits.
-        </p>
-      </div>
-
-      {/* Giant Live Debt Display */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Carbon Debt Counter */}
-        <div className="p-6 lg:p-8 rounded-2xl border border-rose-200 dark:border-rose-300 bg-white/80 dark:bg-[#f8fafc] backdrop-blur-md shadow-sm relative overflow-hidden flex flex-col justify-between h-56">
-          <div className="space-y-1">
-            <span className="text-[10px] font-extrabold text-rose-400 dark:text-rose-400 uppercase tracking-wider block">Carbon Accumulator</span>
-            <h3 className="text-xs text-slate-400">Dynamic CO2 release estimation</h3>
-          </div>
-          <div>
-            <p className="text-4xl lg:text-5xl font-mono font-bold text-rose-500 dark:text-rose-400 tracking-tight">
-              {carbonDebt.toFixed(3)}
-            </p>
-            <span className="text-xs text-slate-400">kg CO2 emissions in progress</span>
-          </div>
-          <div className="flex justify-between text-xs text-slate-500 border-t border-rose-100 dark:border-slate-200 pt-3">
-            <span>Base Rate: {userCarbonRate.toFixed(2)}/s</span>
-            <span className="font-semibold text-rose-500">Current Adjusted: {currentCarbonRate.toFixed(3)}/s</span>
-          </div>
-        </div>
-
-        {/* Financial Debt Counter */}
-        <div className="p-6 lg:p-8 rounded-2xl border border-orange-200 dark:border-orange-300 bg-white/80 dark:bg-[#f8fafc] backdrop-blur-md shadow-sm relative overflow-hidden flex flex-col justify-between h-56">
-          <div className="space-y-1">
-            <span className="text-[10px] font-extrabold text-orange-400 dark:text-orange-400 uppercase tracking-wider block">Financial Waste Clock</span>
-            <h3 className="text-xs text-slate-400">Idle cloud CPU and unoptimized storage cost</h3>
-          </div>
-          <div>
-            <p className="text-4xl lg:text-5xl font-mono font-bold text-orange-400 dark:text-orange-400 tracking-tight">
-              RM{financialDebt.toFixed(2)}
-            </p>
-            <span className="text-xs text-slate-400">MYR accumulated losses</span>
-          </div>
-          <div className="flex justify-between text-xs text-slate-500 border-t border-orange-100 dark:border-slate-200 pt-3">
-            <span>Base Rate: RM{userFinRate.toFixed(2)}/s</span>
-            <span className="font-semibold text-orange-500">Current Adjusted: RM{currentFinRate.toFixed(3)}/s</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Adjust Rates Panel */}
-      <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-200 bg-white/80 backdrop-blur-md shadow-sm space-y-6">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Baseline Telemetry Calibration</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <label className="text-sm font-bold text-slate-600 dark:text-slate-500">Base Carbon Accumulation Rate</label>
-              <span className="font-mono text-sm font-semibold">{userCarbonRate.toFixed(2)} kg/s</span>
-            </div>
-            <input
-              type="range"
-              min="0.1"
-              max="5.0"
-              step="0.05"
-              value={userCarbonRate}
-              onChange={(e) => setUserCarbonRate(Number(e.target.value))}
-              className="w-full accent-rose-400"
-            />
-            <p className="text-xs text-slate-400">
-              Corresponds to average jobsite load size. Larger sites run larger databases, yielding higher base carbon release.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <label className="text-sm font-bold text-slate-600 dark:text-slate-500">Base Cost Waste Rate</label>
-              <span className="font-mono text-sm font-semibold">${userFinRate.toFixed(2)} /s</span>
-            </div>
-            <input
-              type="range"
-              min="0.5"
-              max="10.0"
-              step="0.1"
-              value={userFinRate}
-              onChange={(e) => setUserFinRate(Number(e.target.value))}
-              className="w-full accent-orange-400"
-            />
-            <p className="text-xs text-slate-400">
-              Corresponds to on-demand pricing rates. Standard rates fluctuate between $0.50/s and $10/s.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Historical Forecast Projection Chart */}
-      <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-200 bg-white/80 backdrop-blur-md shadow-sm space-y-6">
-        <div className="space-y-1">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">24-Hour Carbon Debt Forecasting</h3>
-          <p className="text-xs text-slate-400">
-            Calculated comparison of projected cumulative carbon emissions under different power schedules.
+    <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div>
+          <h3 className="text-sm font-bold text-slate-700">Phantom Resource Leaks</h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {projects.filter(p => !p.reaped).length} active · {projects.filter(p => p.reaped).length} reclaimed
           </p>
-         </div>
-
-        <div className="h-80 w-full bg-slate-50/50 dark:bg-slate-50/80 p-4 rounded-xl border border-slate-100 dark:border-slate-200">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={projectionData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorBAU" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#fb7185" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="#fb7185" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorControl" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#818cf8" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorOpt" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 11 }} />
-              <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  color: '#334155',
-                  fontSize: '12px',
-                }}
-              />
-              <Area type="monotone" dataKey="BAU" stroke="#fb7185" strokeWidth={2} fillOpacity={1} fill="url(#colorBAU)" />
-              <Area type="monotone" dataKey="Shift Control" stroke="#818cf8" strokeWidth={2} fillOpacity={1} fill="url(#colorControl)" />
-              <Area type="monotone" dataKey="AI Optimized" stroke="#2dd4bf" strokeWidth={2.5} fillOpacity={1} fill="url(#colorOpt)" />
-            </AreaChart>
-          </ResponsiveContainer>
         </div>
+        <div className="flex items-center gap-2">
+          {['all', 'active', 'reaped'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold capitalize transition-colors ${
+                filter === f ? 'bg-rose-400 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+          <button
+            onClick={() => setActivePage('phantom-reaper')}
+            className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
+            title="View full list"
+          >
+            <IconChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Column headers */}
+      <div className="grid grid-cols-[1fr_72px_68px_64px] gap-2 px-5 py-2.5 bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+        <button onClick={() => toggleSort('name')} className="text-left flex items-center">
+          Resource <SortIcon col="name" />
+        </button>
+        <button onClick={() => toggleSort('co2')} className="text-right flex items-center justify-end">
+          CO2/day <SortIcon col="co2" />
+        </button>
+        <button onClick={() => toggleSort('cost')} className="text-right flex items-center justify-end">
+          Cost <SortIcon col="cost" />
+        </button>
+        <span className="text-right">Status</span>
+      </div>
+
+      {/* Rows */}
+      <div className="overflow-y-auto max-h-64 divide-y divide-slate-50">
+        {displayedProjects.length === 0 ? (
+          <div className="px-5 py-8 text-center text-xs text-slate-400">No records match this filter.</div>
+        ) : displayedProjects.map(p => (
+          <div key={p.id} className="grid grid-cols-[1fr_72px_68px_64px] gap-2 px-5 py-3 items-center hover:bg-slate-50/60 transition-colors">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-slate-700 truncate">{p.name}</p>
+              {p.region && <p className="text-[10px] text-slate-400">{p.region}</p>}
+            </div>
+            <p className={`text-xs font-bold text-right tabular-nums ${p.reaped ? 'text-slate-300 line-through' : 'text-rose-500'}`}>
+              {(p.co2 || 0).toFixed(1)} kg
+            </p>
+            <p className={`text-xs font-bold text-right tabular-nums ${p.reaped ? 'text-slate-300 line-through' : 'text-indigo-500'}`}>
+              RM {(p.cost || 0).toFixed(2)}
+            </p>
+            <div className="flex justify-end">
+              {p.reaped ? (
+                <span className="text-[10px] font-bold text-teal-600 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full">Done</span>
+              ) : (
+                <button
+                  onClick={() => reclaimOne(p)}
+                  className="text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full hover:bg-rose-100 transition-colors"
+                >
+                  Reclaim
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer totals */}
+      <div className="grid grid-cols-[1fr_72px_68px_64px] gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 text-[10px] font-bold text-slate-500">
+        <span>Total active leaks</span>
+        <span className="text-right text-rose-500 tabular-nums">
+          {projects.filter(p => !p.reaped).reduce((s, p) => s + (p.co2 || 0), 0).toFixed(1)} kg
+        </span>
+        <span className="text-right text-indigo-500 tabular-nums">
+          RM {projects.filter(p => !p.reaped).reduce((s, p) => s + (p.cost || 0), 0).toFixed(2)}
+        </span>
+        <span />
       </div>
     </div>
   )

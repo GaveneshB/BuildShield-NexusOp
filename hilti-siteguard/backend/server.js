@@ -10,6 +10,8 @@ app.use('/api/projects',   require('./routes/projects'));
 app.use('/api/resources',  require('./routes/resources'));
 app.use('/api/reaper',     require('./routes/reaper'));
 app.use('/api/lightsout',  require('./routes/lightsOut'));
+app.use('/api/carbon',     require('./routes/carbonRoutes'));
+
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
