@@ -1516,7 +1516,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                 <th className="py-4 px-6">Contractor / Details</th>
                 <th className="py-4 px-6">Contract phase</th>
                 <th className="py-4 px-6">Activity metrics</th>
-                <th className="py-4 px-6">Security score</th>
+                <th className="py-4 px-6">Usage Workload</th>
                 <th className="py-4 px-6">Network access status</th>
                 <th className="py-4 px-6 text-right">Access control</th>
               </tr>
