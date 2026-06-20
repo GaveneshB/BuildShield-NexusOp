@@ -8,14 +8,14 @@ import { getDatabase } from 'firebase/database'
 import { getAnalytics, isSupported as analyticsIsSupported } from 'firebase/analytics'
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBokWWQjxm6IhTF5abYUBd9O-cNYhQDX9E",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "buildshield-nexusop.firebaseapp.com",
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || "https://buildshield-nexusop-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "buildshield-nexusop",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "buildshield-nexusop.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "741198865988",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:741198865988:web:4bc35a82871af1e9b4be11",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-CE7KW9KPZQ",
+  apiKey: "AIzaSyBokWWQjxm6IhTF5abYUBd9O-cNYhQDX9E",
+  authDomain: "buildshield-nexusop.firebaseapp.com",
+  databaseURL: "https://buildshield-nexusop-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "buildshield-nexusop",
+  storageBucket: "buildshield-nexusop.firebasestorage.app",
+  messagingSenderId: "741198865988",
+  appId: "1:741198865988:web:4bc35a82871af1e9b4be11",
+  measurementId: "G-CE7KW9KPZQ",
 }
 
 let app = null
