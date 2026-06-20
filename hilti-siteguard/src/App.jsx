@@ -194,10 +194,46 @@ export default function App() {
       console.warn(e)
     }
     return [
-      { id: 1, name: 'Apex Plumbing', phase: 'Active', downloads: 24, hours: 2.4, accessStatus: 'Granted' },
-      { id: 2, name: 'Bright Electric', phase: 'Active', downloads: 120, hours: 12.1, accessStatus: 'Granted' },
-      { id: 3, name: 'Eagle HVAC', phase: 'Completed', downloads: 3, hours: 0.2, accessStatus: 'Revoked' }
-    ]
+  { 
+    id: 1, 
+    name: 'Apex Plumbing', 
+    phase: 'Active', 
+    hours: 2.4, // Keep this as total for backward compatibility
+    accessStatus: 'Granted',
+    activityBreakdown: {
+      serverUptime: 2.4,         // Hours spent connected
+      apiQueryVolume: 120,       // Number of API endpoints hit
+      heavyPayloadSyncs: 4,      // Large CAD/BIM model transfers
+      primaryDriver: 'Heavy API Querying' // What's causing the load
+    }
+  },
+  { 
+    id: 2, 
+    name: 'Bright Electric', 
+    phase: 'Active', 
+    hours: 12.1, 
+    accessStatus: 'Granted',
+    activityBreakdown: {
+      serverUptime: 12.1,
+      apiQueryVolume: 1450, 
+      heavyPayloadSyncs: 42,
+      primaryDriver: 'Continuous Background Syncing'
+    }
+  },
+  { 
+    id: 3, 
+    name: 'Eagle HVAC', 
+    phase: 'Completed', 
+    hours: 0.2, 
+    accessStatus: 'Revoked',
+    activityBreakdown: {
+      serverUptime: 0.2,
+      apiQueryVolume: 5, 
+      heavyPayloadSyncs: 0,
+      primaryDriver: 'Idle Connection'
+    }
+  }
+]
   })
 
   // Helper score calculator
