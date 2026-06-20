@@ -283,8 +283,8 @@ export default function ChaosCurePage({ triggerToast }) {
                 key={p.id}
                 onClick={() => handlePolicyChange(p.id)}
                 className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${activePolicy === p.id
-                    ? 'bg-rose-400 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-rose-400 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
               >
                 {p.label}
@@ -320,8 +320,8 @@ export default function ChaosCurePage({ triggerToast }) {
               onClick={handleTrigger}
               disabled={running || !connected || aiAnalyzing}
               className={`px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm transition flex items-center gap-2 ${running || !connected || aiAnalyzing
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-rose-400 hover:bg-rose-500 text-white active-pulse'
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                : 'bg-rose-400 hover:bg-rose-500 text-white active-pulse'
                 }`}
             >
               {aiAnalyzing ? (
