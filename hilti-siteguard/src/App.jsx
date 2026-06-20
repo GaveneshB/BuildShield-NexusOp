@@ -126,6 +126,54 @@ const IconRefresh = ({ className = "w-5 h-5" }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17" />
   </svg>
 )
+//Generate Automated Suggestion
+// Generates contextual operational suggestions based on real-time activity drivers
+const getActionSuggestion = (sub, efficiencyVal) => {
+  if (sub.phase === 'Completed') {
+    return {
+      text: 'Archive Environment',
+      subtext: 'Contract completed. Safe to deallocate.',
+      badgeStyle: 'bg-slate-500/10 text-slate-600 border-slate-500/20'
+    };
+  }
+
+  const breakdown = sub.activityBreakdown || { serverUptime: sub.hours, apiQueryVolume: 0, heavyPayloadSyncs: 0, primaryDriver: 'N/A' };
+
+  // Rule 1: High connection time but doing absolutely nothing
+  if (breakdown.serverUptime > 8 && breakdown.apiQueryVolume < 50 && breakdown.heavyPayloadSyncs === 0) {
+    return {
+      text: 'Enable Idle Auto-Pause',
+      subtext: 'Instance idling out of working shift.',
+      badgeStyle: 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+    };
+  }
+
+  // Rule 2: Flooding the server with database/API network IOPS requests
+  if (breakdown.apiQueryVolume > 1000) {
+    return {
+      text: 'Implement API Throttling',
+      subtext: 'High query velocity footprint detected.',
+      badgeStyle: 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+    };
+  }
+
+  // Rule 3: Heavy assets/file transfer spikes
+  if (breakdown.heavyPayloadSyncs > 25) {
+    return {
+      text: 'Schedule Off-Peak Sync',
+      subtext: 'Move heavy payload runs to night shift.',
+      badgeStyle: 'bg-blue-500/10 text-blue-600 border-blue-500/20'
+    };
+  }
+
+  // Standard Baseline State
+  return {
+    text: 'Maintain Standard Scale',
+    subtext: 'Workload pattern matches baseline.',
+    badgeStyle: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+  };
+};
+
 
 /* -------------------------------------------------------------
  * MAIN APP COMPONENT
@@ -195,10 +243,46 @@ export default function App() {
       console.warn(e)
     }
     return [
-      { id: 1, name: 'Apex Plumbing', phase: 'Active', downloads: 24, hours: 2.4, accessStatus: 'Granted' },
-      { id: 2, name: 'Bright Electric', phase: 'Active', downloads: 120, hours: 12.1, accessStatus: 'Granted' },
-      { id: 3, name: 'Eagle HVAC', phase: 'Completed', downloads: 3, hours: 0.2, accessStatus: 'Revoked' }
-    ]
+  { 
+    id: 1, 
+    name: 'Apex Plumbing', 
+    phase: 'Active', 
+    hours: 2.4, // Keep this as total for backward compatibility
+    accessStatus: 'Granted',
+    activityBreakdown: {
+      serverUptime: 2.4,         // Hours spent connected
+      apiQueryVolume: 120,       // Number of API endpoints hit
+      heavyPayloadSyncs: 4,      // Large CAD/BIM model transfers
+      primaryDriver: 'Heavy API Querying' // What's causing the load
+    }
+  },
+  { 
+    id: 2, 
+    name: 'Bright Electric', 
+    phase: 'Active', 
+    hours: 12.1, 
+    accessStatus: 'Granted',
+    activityBreakdown: {
+      serverUptime: 12.1,
+      apiQueryVolume: 1450, 
+      heavyPayloadSyncs: 42,
+      primaryDriver: 'Continuous Background Syncing'
+    }
+  },
+  { 
+    id: 3, 
+    name: 'Eagle HVAC', 
+    phase: 'Completed', 
+    hours: 0.2, 
+    accessStatus: 'Revoked',
+    activityBreakdown: {
+      serverUptime: 0.2,
+      apiQueryVolume: 5, 
+      heavyPayloadSyncs: 0,
+      primaryDriver: 'Idle Connection'
+    }
+  }
+]
   })
 
   // Helper score calculator
@@ -1435,20 +1519,22 @@ function LightsOutPage({
 }
 
 /* -------------------------------------------------------------
- * 4. SUBCONTRACTOR TRUST SCORE PAGE
+ * 4. SUBCONTRACTOR TRUST SCORE PAGE (REFACTORED & FULLY RESTORED)
  * ------------------------------------------------------------- */
 function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToast }) {
   const [search, setSearch] = useState('')
   const [filterPhase, setFilterPhase] = useState('All')
+  
+  // Form input states for creating new contractors safely
   const [showAddForm, setShowAddForm] = useState(false)
   const [newSubName, setNewSubName] = useState('')
   const [newSubPhase, setNewSubPhase] = useState('Active')
-  const [newSubDl, setNewSubDl] = useState(10)
-  const [newSubHours, setNewSubHours] = useState(5.0)
+  const [newSubDriver, setNewSubDriver] = useState('Standard Connection')
+  const [newSubUptime, setNewSubUptime] = useState(1.0)
+  const [newSubQueries, setNewSubQueries] = useState(10)
+  const [newSubDrops, setNewSubDrops] = useState(0)
 
-  const getSubColor = (s) => s > 80 ? 'bg-teal-400' : s >= 50 ? 'bg-orange-300' : 'bg-rose-400'
-  const getSubText = (s) => s > 80 ? 'text-teal-600 border-teal-200 bg-teal-50' : s >= 50 ? 'text-orange-600 border-orange-200 bg-orange-50' : 'text-rose-500 border-rose-200 bg-rose-50'
-
+  // Safe filtering logic
   const filteredSubs = useMemo(() => {
     return subs.filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase())
@@ -1457,6 +1543,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
     })
   }, [subs, search, filterPhase])
 
+  // Subcontractor submission handler
   const handleAddSub = (e) => {
     e.preventDefault()
     if (!newSubName.trim()) {
@@ -1464,42 +1551,61 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
       return
     }
 
+    const calculatedHours = Number(newSubUptime)
+
     const newSub = {
       id: Date.now(),
       name: newSubName,
       phase: newSubPhase,
-      downloads: Number(newSubDl),
-      hours: Number(newSubHours),
-      accessStatus: newSubPhase === 'Completed' ? 'Revoked' : 'Granted'
+      hours: calculatedHours, // Backward compatibility parameter
+      downloads: Number(newSubDrops), // Maps safely back to dashboard legacy calculations
+      accessStatus: newSubPhase === 'Completed' ? 'Revoked' : 'Granted',
+      activityBreakdown: {
+        serverUptime: calculatedHours,
+        apiQueryVolume: Number(newSubQueries),
+        heavyPayloadSyncs: Number(newSubDrops),
+        primaryDriver: newSubDriver
+      }
     }
 
     saveSubs([...subs, newSub])
+    
+    // Reset state values cleanly
     setNewSubName('')
+    setNewSubUptime(1.0)
+    setNewSubQueries(10)
+    setNewSubDrops(0)
+    setNewSubDriver('Standard Connection')
     setShowAddForm(false)
-    triggerToast(`Added subcontractor ${newSub.name} to security index.`, "success")
+    
+    triggerToast(`Added subcontractor ${newSub.name} to optimization index.`, "success")
   }
+
+  const getSubColor = (s) => s > 80 ? 'bg-emerald-500' : s >= 50 ? 'bg-yellow-500' : 'bg-red-500'
 
   return (
     <div className="space-y-8 animate-fade-in">
+      {/* Header Container with Add Button reinstated */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-2">
           <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">👥 Subcontractor Trust Score</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Monitors real-time activity, data access frequencies, and revokes credentials instantly when contracts complete.
+            Monitors real-time activity, operational workloads, and provides automated environmental downscaling suggestions.
           </p>
         </div>
 
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2.5 rounded-xl bg-rose-400 hover:bg-rose-500 text-white font-bold text-sm shadow-sm flex items-center gap-2 self-start md:self-auto transition"
+          className="px-4 py-2.5 rounded-xl bg-rose-400 hover:bg-rose-500 text-white font-bold text-sm shadow-sm shadow-rose-200 flex items-center gap-2 self-start md:self-auto transition-colors"
         >
-          {showAddForm ? 'Cancel Add' : 'Add Subcontractor'}
+          {showAddForm ? 'Cancel Registration' : 'Register Subcontractor'}
         </button>
       </div>
 
+      {/* Dynamic Registration Input Form Layout */}
       {showAddForm && (
-        <form onSubmit={handleAddSub} className="p-6 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm space-y-4 max-w-xl animate-slide-in">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Register Subcontractor</h3>
+        <form onSubmit={handleAddSub} className="p-6 rounded-2xl border border-slate-300 bg-white backdrop-blur-md shadow-md space-y-4 max-w-2xl animate-slide-in">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Register Subcontractor Node</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col">
@@ -1508,62 +1614,88 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                 type="text"
                 value={newSubName}
                 onChange={(e) => setNewSubName(e.target.value)}
-                placeholder="Apex Structural Ltd"
-                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none focus:border-rose-300 transition-colors text-slate-700"
+                placeholder="e.g., Apex Structural Ltd"
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-xs font-semibold mb-1.5 text-slate-500">Contract Status</label>
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Contract Lifecycle Status</label>
               <select
                 value={newSubPhase}
                 onChange={(e) => setNewSubPhase(e.target.value)}
-                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none focus:border-rose-300 transition-colors"
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700 font-medium"
               >
                 <option value="Active">Active Contract</option>
-                <option value="Completed">Completed Contract</option>
+                <option value="Completed">Completed Lifecycle</option>
               </select>
             </div>
 
             <div className="flex flex-col">
-              <label className="text-xs font-semibold mb-1.5 text-slate-500">Simulated Downloads</label>
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Primary Workload Activity Driver</label>
+              <select
+                value={newSubDriver}
+                onChange={(e) => setNewSubDriver(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700 font-medium"
+              >
+                <option value="Standard Connection">Standard Connection</option>
+                <option value="Heavy API Querying">Heavy API Querying</option>
+                <option value="Continuous Background Syncing">Continuous Background Syncing</option>
+                <option value="Idle Connection">Idle Connection</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Simulated Server Connection (Hours)</label>
               <input
                 type="number"
-                min="0"
-                max="500"
-                value={newSubDl}
-                onChange={(e) => setNewSubDl(e.target.value)}
-                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none focus:border-rose-300 transition-colors text-slate-700"
+                min="0.1"
+                step="0.1"
+                max="24"
+                value={newSubUptime}
+                onChange={(e) => setNewSubUptime(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-xs font-semibold mb-1.5 text-slate-500">Simulated Sync Uptime (hrs)</label>
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Simulated API Query Count</label>
+              <input
+                type="number"
+                min="0"
+                max="5000"
+                value={newSubQueries}
+                onChange={(e) => setNewSubQueries(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Simulated Large Heavy Payload Drops</label>
               <input
                 type="number"
                 min="0"
                 max="100"
-                step="0.5"
-                value={newSubHours}
-                onChange={(e) => setNewSubHours(e.target.value)}
-                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold outline-none focus:border-rose-300 transition-colors text-slate-700"
+                value={newSubDrops}
+                onChange={(e) => setNewSubDrops(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end pt-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-teal-400 hover:bg-teal-500 text-white font-bold text-sm rounded-xl transition"
+              className="px-4 py-2 bg-teal-400 hover:bg-teal-500 text-white font-bold text-sm rounded-xl transition-colors shadow-sm shadow-teal-100"
             >
-              Confirm Registration
+              Confirm Subcontractor Registration
             </button>
           </div>
         </form>
       )}
 
-      {/* Searching & Filters */}
-      <div className="p-4 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Searching & Filter Bar Row Controls */}
+      <div className="p-4 rounded-2xl border border-slate-300 bg-white backdrop-blur-md shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="relative flex-grow max-w-md">
           <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
             <IconSearch />
@@ -1573,13 +1705,13 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search subcontractors by registry name..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm outline-none focus:border-rose-300 transition-all text-slate-700"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-all text-slate-700"
           />
         </div>
 
         <div className="flex items-center gap-2 self-start md:self-auto text-sm shrink-0">
-          <span className="text-slate-500 font-medium">Contract Phase:</span>
-          <div className="flex border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
+          <span className="text-slate-400 font-medium">Contract Phase:</span>
+          <div className="flex border border-slate-200 rounded-xl overflow-hidden bg-white">
             {['All', 'Active', 'Completed'].map(phase => (
               <button
                 key={phase}
@@ -1587,7 +1719,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                 className={`px-3 py-1.5 font-bold text-xs transition-colors ${
                   filterPhase === phase
                     ? 'bg-rose-400 text-white'
-                    : 'text-slate-500 hover:bg-slate-100'
+                    : 'text-slate-500 hover:bg-slate-50'
                 }`}
               >
                 {phase}
@@ -1597,63 +1729,68 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
         </div>
       </div>
 
-      {/* Table Container */}
-      <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm overflow-hidden">
+      {/* Subcontractor Workload Diagnostic Data Grid */}
+      <div className="rounded-2xl border border-slate-300 bg-white shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 bg-slate-50/50">
+              <tr className="border-b border-slate-300 text-[10px] font-extrabold uppercase tracking-wider text-slate-600 bg-slate-100">
                 <th className="py-4 px-6">Contractor / Details</th>
-                <th className="py-4 px-6">Contract phase</th>
-                <th className="py-4 px-6">Activity metrics</th>
-                <th className="py-4 px-6">Usage Workload</th>
-                <th className="py-4 px-6">Network access status</th>
-                <th className="py-4 px-6 text-right">Emergency Button</th>
+                <th className="py-4 px-6">Contract Phase</th>
+                <th className="py-4 px-6">Primary Workload Activity</th>
+                <th className="py-4 px-6">Efficiency Index</th>
+                <th className="py-4 px-6">Automated Suggestion</th>
+                <th className="py-4 px-6 text-right">Performance Tuning</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               {filteredSubs.length > 0 ? (
                 filteredSubs.map(sub => {
-                  const scoreVal = getScore(sub.downloads, sub.hours)
+                  const scoreVal = getScore(sub.downloads || 0, sub.hours || 0, sub.phase, sub.accessStatus)
+                  const suggestion = getActionSuggestion(sub, scoreVal)
+                  const breakdown = sub.activityBreakdown || { serverUptime: sub.hours, apiQueryVolume: 0, heavyPayloadSyncs: 0, primaryDriver: 'Standard Connection' }
+
                   return (
-                    <tr key={sub.id} className="hover:bg-slate-50/50 text-sm transition-colors">
+                    <tr key={sub.id} className="table-row-interactive text-sm">
                       <td className="py-4 px-6">
-                        <p className="font-bold text-slate-700">{sub.name}</p>
-                        <span className="text-xs text-slate-400 font-mono">UID-{sub.id.toString().slice(-6)}</span>
+                        <p className="text-sm transition-all duration-200 bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded-xl my-2 block md:table-row shadow-sm hover:shadow-md hover:border-blue-300">{sub.name}</p>
+                        <span className="text-xs text-slate-500 font-mono">UID-{sub.id.toString().slice(-6)}</span>
                       </td>
                       <td className="py-4 px-6">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                          sub.phase === 'Active'
-                            ? 'bg-indigo-50 text-indigo-500 border border-indigo-100'
-                            : 'bg-slate-100 text-slate-500 border border-slate-200'
+                          sub.phase === 'Active' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'
                         }`}>
                           {sub.phase}
                         </span>
                       </td>
-                      <td className="py-4 px-6 font-mono text-xs text-slate-500">
-                        {sub.downloads} files downloaded · {sub.hours}h active syncs
-                      </td>
                       <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden shrink-0">
-                            <div className={`h-full rounded-full transition-all duration-500 ${getSubColor(scoreVal)}`} style={{ width: `${scoreVal}%` }} />
-                          </div>
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getSubText(scoreVal)}`}>
-                            {scoreVal}%
-                          </span>
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-slate-800 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                            {breakdown.primaryDriver}
+                          </p>
+                          <p className="text-[11px] text-slate-500 font-mono">
+                            {breakdown.serverUptime}h Connected · {breakdown.apiQueryVolume} Queries · {breakdown.heavyPayloadSyncs} Drops
+                          </p>
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`flex items-center gap-1.5 text-xs font-bold ${
-                          sub.accessStatus === 'Granted'
-                            ? 'text-teal-500'
-                            : 'text-rose-400'
-                        }`}>
-                          <span className={`w-2 h-2 rounded-full ${
-                            sub.accessStatus === 'Granted' ? 'bg-teal-400' : 'bg-rose-400 active-pulse'
-                          }`} />
-                          {sub.accessStatus === 'Granted' ? 'Cloud Access Active' : 'Access Suspended'}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-20 h-1.5 bg-slate-300 rounded-full overflow-hidden shrink-0">
+                            <div className={`h-full ${getSubColor(scoreVal)}`} style={{ width: `${scoreVal}%` }} />
+                          </div>
+                          <span className="font-bold font-mono text-slate-800">{scoreVal}%</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex flex-col">
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold border max-w-max ${suggestion.badgeStyle}`}>
+                            {suggestion.text}
+                          </span>
+                          <span className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[180px]">
+                            {suggestion.subtext}
+                          </span>
+                        </div>
                       </td>
                       <td className="py-4 px-6 text-right">
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -1662,9 +1799,9 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                             checked={sub.accessStatus === 'Granted'}
                             onChange={() => toggleSubAccess(sub.id)}
                             disabled={sub.phase === 'Completed'}
-                            className="sr-only peer switch-input"
+                            className="sr-only peer"
                           />
-                          <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-rose-200 peer-checked:bg-teal-400 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                          <div className="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:bg-teal-500 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-400 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
                         </label>
                       </td>
                     </tr>
@@ -1672,8 +1809,8 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                 })
               ) : (
                 <tr>
-                  <td colSpan="6" className="py-8 text-center text-slate-400 text-xs">
-                    No subcontractor registry matches found.
+                  <td colSpan="6" className="py-8 text-center text-slate-400 text-xs font-medium">
+                    No subcontractor workflow registries match the current query filter.
                   </td>
                 </tr>
               )}
