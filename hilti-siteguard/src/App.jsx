@@ -1064,48 +1064,31 @@ function DashboardView({
             </div>
           </div>
 
-{/* Subcontractor Trust Quick Widget */}
-<div
-  onClick={() => setActivePage('trust-score')}
-  className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 cursor-pointer group shadow-sm transition hover:shadow-md"
->
-  <div className="flex items-center justify-between">
-    <div>
-      <h3 className="text-sm font-bold text-slate-700 group-hover:text-rose-400 transition-colors">
-        👥 Contractor Effective Status
-      </h3>
-      <p className="text-xs text-slate-400 mt-0.5">Cloud access by trust score</p>
-    </div>
-    <IconChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
-  </div>
+          {/* Subcontractor Trust Quick Widget */}
+          <div
+            onClick={() => setActivePage('trust-score')}
+            className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 space-y-4 cursor-pointer group shadow-sm transition hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-700 group-hover:text-rose-400 transition-colors">
+                  👥 Contractor Effective Status
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">Cloud access by trust score</p>
+              </div>
+              <IconChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
+            </div>
 
-  <div className="space-y-3">
-    {subs.slice(0, 4).map(s => {
-      const scoreVal = getScore(s.downloads, s.hours)
-      const barColor = scoreVal > 80 ? 'bg-teal-400' : scoreVal >= 50 ? 'bg-orange-300' : 'bg-rose-400'
-      const textColor = scoreVal > 80 ? 'text-teal-600' : scoreVal >= 50 ? 'text-orange-500' : 'text-rose-500'
-      
-      return (
-        <div key={s.id} className="flex items-center gap-3">
-          <span className="text-xs font-medium text-slate-600 w-28 truncate shrink-0">{s.name}</span>
-          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${scoreVal}%` }} />
-          </div>
-          <span className={`text-xs font-bold w-8 text-right shrink-0 ${textColor}`}>{scoreVal}%</span>
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-            s.accessStatus === 'Granted' ? 'bg-teal-100 text-teal-600' : 'bg-rose-100 text-rose-600'
-          }`}>
-            {s.accessStatus}
-          </span>
-        </div>
-      )
-    })}
-    
-    {subs.length > 4 && (
-      <p className="text-xs text-slate-400 text-right">+{subs.length - 4} more — view all</p>
-    )}
-  </div>
-</div>
+            <div className="space-y-3">
+              {subs.slice(0, 4).map(s => {
+                const scoreVal = getScore(s.downloads, s.hours)
+                const barColor = scoreVal > 80 ? 'bg-teal-400' : scoreVal >= 50 ? 'bg-orange-300' : 'bg-rose-400'
+                const textColor = scoreVal > 80 ? 'text-teal-600' : scoreVal >= 50 ? 'text-orange-500' : 'text-rose-500'
+                
+                return (
+                  <div key={s.id} className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-slate-600 w-28 truncate shrink-0">{s.name}</span>
+                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${scoreVal}%` }} />
                     </div>
                     <span className={`text-xs font-bold w-8 text-right shrink-0 ${textColor}`}>{scoreVal}%</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
@@ -1116,6 +1099,7 @@ function DashboardView({
                   </div>
                 )
               })}
+              
               {subs.length > 4 && (
                 <p className="text-xs text-slate-400 text-right">+{subs.length - 4} more — view all</p>
               )}
