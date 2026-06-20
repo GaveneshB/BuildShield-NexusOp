@@ -146,15 +146,20 @@ export default function ChaosCurePage({ triggerToast }) {
     }
   }, [logs]);
 
-  // Fetch scenarios on mount
+  // Try to fetch live scenarios from backend (updates list if server is reachable)
   useEffect(() => {
-    const mockScenarios = [
-      { id: 'SCENARIO_1_DATA_EXFIL', label: 'Rogue Data Exfiltration' },
-      { id: 'SCENARIO_2_CRYPTO_MINING', label: 'Cryptojacking Workload' },
-      { id: 'SCENARIO_3_IDLE_SPRAWL', label: 'Idle Zombie Infrastructure' },
-    ];
-    setScenarios(mockScenarios);
-    if (mockScenarios.length > 0) setSelectedScenario(mockScenarios[0].id);
+    fetch('http://localhost:5555/api/chaos/scenarios')
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          setScenarios(data);
+          setSelectedScenario(data[0].id);
+        }
+      })
+      .catch(() => {
+        // Backend unreachable — hardcoded 12 scenarios already loaded as default
+        console.info('[Chaos] Using local scenario list (backend offline)');
+      });
   }, []);
 
   // Simulate telemetry updates (rolling 30-point window)
