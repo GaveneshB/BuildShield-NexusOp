@@ -1,153 +1,121 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { io } from 'socket.io-client';
 
+// MOCK LOCAL ENGINE for Chaos & Cure
+// Replaces localhost WebSocket to guarantee it works flawlessly on Vercel
 export function useChaosSocket(onEvent) {
-  const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
-
   const onEventRef = useRef(onEvent);
+  
+  const stateRef = useRef({
+    activeIncidentId: null,
+    costTimer: null,
+    costAccumulated: 0,
+    elapsedSeconds: 0,
+    policy: 'balanced'
+  });
+
   useEffect(() => {
     onEventRef.current = onEvent;
   }, [onEvent]);
 
   useEffect(() => {
-    // Determine backend URL
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5555';
-
-    // Connect to WebSocket namespace
-    const chaosSocket = io(`${backendUrl}/chaos-cure`, {
-      path: '/socket.io/',
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5,
-    });
-
-    chaosSocket.on('connect', () => {
-      console.log('[CHAOS] Connected to backend');
+    // Simulate connection
+    setTimeout(() => {
       setConnected(true);
-    });
-
-    chaosSocket.on('disconnect', () => {
-      console.log('[CHAOS] Disconnected from backend');
-      setConnected(false);
-    });
-
-    // Listen for all incident events
-    [
-      'incident:started',
-      'incident:cost-update',
-      'incident:risk-assessed',
-      'incident:cure-executed',
-      'incident:approval-needed',
-      'incident:approved',
-      'incident:denied',
-      'incident:rolled-back',
-      'incident:notified',
-    ].forEach(event => {
-      chaosSocket.on(event, (data) => {
-        if (onEventRef.current) {
-          onEventRef.current(event, data);
-        }
-      });
-    });
-
-    chaosSocket.on('policy-updated', (data) => {
-      if (onEventRef.current) {
-        onEventRef.current('policy-updated', data);
-      }
-    });
-
-    socketRef.current = chaosSocket;
+      console.log('[CHAOS MOCK] Connected to local engine simulator');
+    }, 500);
 
     return () => {
-      chaosSocket.disconnect();
+      if (stateRef.current.costTimer) clearInterval(stateRef.current.costTimer);
     };
   }, []);
 
-  const triggerIncident = useCallback(
-    async (scenarioId) => {
-      try {
-        const response = await fetch('http://localhost:5555/api/chaos/trigger', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scenarioId }),
-        });
-        const data = await response.json();
-        if (response.ok) {
-          return data;
+  const triggerIncident = useCallback(async (scenarioId) => {
+    const id = `INC-${Date.now()}`;
+    stateRef.current.activeIncidentId = id;
+    stateRef.current.costAccumulated = 0;
+    stateRef.current.elapsedSeconds = 0;
+    
+    // 1. Started
+    onEventRef.current('incident:started', {
+      incidentId: id,
+      scenario: { id: scenarioId, label: scenarioId.replace(/_/g, ' ') }
+    });
+
+    // 2. Cost Tick
+    stateRef.current.costTimer = setInterval(() => {
+      stateRef.current.costAccumulated += Math.random() * 5 + 2;
+      stateRef.current.elapsedSeconds += 1;
+      onEventRef.current('incident:cost-update', {
+        metric: 'Financial Burn',
+        value: stateRef.current.costAccumulated,
+        elapsedSeconds: stateRef.current.elapsedSeconds
+      });
+    }, 1000);
+
+    // 3. Risk Assessed (AI Simulation)
+    setTimeout(() => {
+      if (stateRef.current.activeIncidentId !== id) return;
+      
+      const tier = stateRef.current.policy === 'aggressive' ? 'TIER_1_AUTO' : 'TIER_3_MANUAL';
+      onEventRef.current('incident:risk-assessed', {
+        riskScore: { actionScore: 8.5, confidence: 0.95, reversibility: 0.8, blastRadius: 0.2 },
+        tier: tier,
+        reasoning: "High confidence of resource abuse detected."
+      });
+
+      // 4. Action Needed
+      setTimeout(() => {
+        if (stateRef.current.activeIncidentId !== id) return;
+        
+        if (tier === 'TIER_3_MANUAL') {
+          onEventRef.current('incident:approval-needed', {
+            proposedRemediation: { label: 'Terminate Rogue Processes & Isolate Container' }
+          });
         } else {
-          console.error('Trigger failed:', data);
-          return null;
+          // Auto execute
+          clearInterval(stateRef.current.costTimer);
+          onEventRef.current('incident:cure-executed', {
+            remediationLabel: 'Auto-Terminated Rogue Workload'
+          });
         }
-      } catch (err) {
-        console.error('Trigger error:', err);
-        return null;
-      }
-    },
-    []
-  );
+      }, 1500);
 
-  const approveIncident = useCallback(
-    async (incidentId) => {
-      try {
-        const response = await fetch(`http://localhost:5555/api/chaos/${incidentId}/approve`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        return await response.json();
-      } catch (err) {
-        console.error('Approve error:', err);
-        return null;
-      }
-    },
-    []
-  );
+    }, 2000);
 
-  const denyIncident = useCallback(
-    async (incidentId) => {
-      try {
-        const response = await fetch(`http://localhost:5555/api/chaos/${incidentId}/deny`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        return await response.json();
-      } catch (err) {
-        console.error('Deny error:', err);
-        return null;
-      }
-    },
-    []
-  );
+    return { success: true };
+  }, []);
 
-  const rollbackIncident = useCallback(
-    async (incidentId) => {
-      try {
-        const response = await fetch(`http://localhost:5555/api/chaos/${incidentId}/rollback`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        return await response.json();
-      } catch (err) {
-        console.error('Rollback error:', err);
-        return null;
-      }
-    },
-    []
-  );
+  const approveIncident = useCallback(async (incidentId) => {
+    onEventRef.current('incident:approved', { incidentId });
+    setTimeout(() => {
+      clearInterval(stateRef.current.costTimer);
+      onEventRef.current('incident:cure-executed', {
+        remediationLabel: 'Terminated Rogue Processes & Isolated Container'
+      });
+    }, 800);
+    return { success: true };
+  }, []);
 
-  const setPolicy = useCallback(
-    (policyId) => {
-      if (socketRef.current) {
-        socketRef.current.emit('set-policy', policyId);
-      }
-    },
-    []
-  );
+  const denyIncident = useCallback(async (incidentId) => {
+    clearInterval(stateRef.current.costTimer);
+    onEventRef.current('incident:denied', { incidentId });
+    return { success: true };
+  }, []);
+
+  const rollbackIncident = useCallback(async (incidentId) => {
+    onEventRef.current('incident:rolled-back', { incidentId });
+    return { success: true };
+  }, []);
+
+  const setPolicy = useCallback((policyId) => {
+    stateRef.current.policy = policyId;
+    onEventRef.current('policy-updated', { orgId: 'mock-org' });
+  }, []);
 
   return {
     connected,
-    socket: socketRef.current,
+    socket: null,
     triggerIncident,
     approveIncident,
     denyIncident,
