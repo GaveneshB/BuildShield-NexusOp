@@ -1786,16 +1786,31 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                           {sub.phase}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
-                        <div className="space-y-0.5">
-                          <p className="font-semibold text-slate-800 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                            {breakdown.primaryDriver}
-                          </p>
-                          <p className="text-[11px] text-slate-500 font-mono">
-                            {breakdown.serverUptime}h Connected · {breakdown.apiQueryVolume} Queries · {breakdown.heavyPayloadSyncs} Drops
-                          </p>
-                        </div>
+                        <td className="py-4 px-6">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              {/* Live Automation Pulsing Radar */}
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+                              </span>
+                              <p className="font-bold text-slate-700 dark:text-slate-300">
+                                {breakdown.primaryDriver}
+                              </p>
+                            </div>
+                            
+                            {/* Real-time Telemetry Pipeline Logs */}
+                            <div className="flex flex-col text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5 font-mono">
+                              <p>📡 Compute Session: <span className="text-slate-700 dark:text-slate-300 font-semibold">{breakdown.serverUptime}h continuous</span></p>
+                              <p>📊 Network Payload: <span className="text-slate-700 dark:text-slate-300 font-semibold">{breakdown.apiQueryVolume} IOPS telemetry hits</span></p>
+                              <p>📦 S3 Object Drops: <span className="text-slate-700 dark:text-slate-300 font-semibold">{breakdown.heavyPayloadSyncs} bulk file streams</span></p>
+                            </div>
+                            
+                            {/* Automation Source Stamp */}
+                            <span className="inline-block text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider max-w-max">
+                              via buildshield-agent-v2.4
+                            </span>
+                          </div>
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
