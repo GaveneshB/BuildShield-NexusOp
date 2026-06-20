@@ -1514,7 +1514,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
 
       {/* Dynamic Registration Input Form Layout */}
       {showAddForm && (
-        <form onSubmit={handleAddSub} className="p-6 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm space-y-4 max-w-2xl animate-slide-in">
+        <form onSubmit={handleAddSub} className="p-6 rounded-2xl border border-slate-300 bg-white backdrop-blur-md shadow-md space-y-4 max-w-2xl animate-slide-in">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Register Subcontractor Node</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1605,7 +1605,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
       )}
 
       {/* Searching & Filter Bar Row Controls */}
-      <div className="p-4 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-4 rounded-2xl border border-slate-300 bg-white backdrop-blur-md shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="relative flex-grow max-w-md">
           <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
             <IconSearch />
@@ -1640,11 +1640,11 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
       </div>
 
       {/* Subcontractor Workload Diagnostic Data Grid */}
-      <div className="rounded-2xl border border-slate-200 bg-white dark:bg-[#131b2e] shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-slate-300 bg-white shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 bg-slate-50 dark:bg-slate-900/30">
+              <tr className="border-b border-slate-300 text-[10px] font-extrabold uppercase tracking-wider text-slate-600 bg-slate-100">
                 <th className="py-4 px-6">Contractor / Details</th>
                 <th className="py-4 px-6">Contract Phase</th>
                 <th className="py-4 px-6">Primary Workload Activity</th>
@@ -1653,7 +1653,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                 <th className="py-4 px-6 text-right">Performance Tuning</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-200">
               {filteredSubs.length > 0 ? (
                 filteredSubs.map(sub => {
                   const scoreVal = getScore(sub.downloads || 0, sub.hours || 0, sub.phase, sub.accessStatus)
@@ -1663,19 +1663,19 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                   return (
                     <tr key={sub.id} className="table-row-interactive text-sm">
                       <td className="py-4 px-6">
-                        <p className="text-sm transition-all duration-200 bg-transparent hover:bg-slate-50/30 border border-slate-200 dark:border-slate-800 rounded-xl my-2 block md:table-row shadow-sm hover:shadow-md hover:border-rose-300 dark:hover:border-rose-500/50">{sub.name}</p>
+                        <p className="text-sm transition-all duration-200 bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded-xl my-2 block md:table-row shadow-sm hover:shadow-md hover:border-blue-300">{sub.name}</p>
                         <span className="text-xs text-slate-500 font-mono">UID-{sub.id.toString().slice(-6)}</span>
                       </td>
                       <td className="py-4 px-6">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                          sub.phase === 'Active' ? 'bg-blue-500/10 text-blue-600' : 'bg-slate-500/10 text-slate-500'
+                          sub.phase === 'Active' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'
                         }`}>
                           {sub.phase}
                         </span>
                       </td>
                       <td className="py-4 px-6">
                         <div className="space-y-0.5">
-                          <p className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                          <p className="font-semibold text-slate-800 flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                             {breakdown.primaryDriver}
                           </p>
@@ -1686,10 +1686,10 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="w-20 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shrink-0">
+                          <div className="w-20 h-1.5 bg-slate-300 rounded-full overflow-hidden shrink-0">
                             <div className={`h-full ${getSubColor(scoreVal)}`} style={{ width: `${scoreVal}%` }} />
                           </div>
-                          <span className="font-bold font-mono text-slate-700 dark:text-slate-300">{scoreVal}%</span>
+                          <span className="font-bold font-mono text-slate-800">{scoreVal}%</span>
                         </div>
                       </td>
                       <td className="py-4 px-6">
@@ -1711,7 +1711,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                             disabled={sub.phase === 'Completed'}
                             className="sr-only peer"
                           />
-                          <div className="w-9 h-5 bg-slate-200 dark:bg-slate-800 rounded-full peer peer-checked:bg-teal-400 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                          <div className="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:bg-teal-500 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-400 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
                         </label>
                       </td>
                     </tr>
