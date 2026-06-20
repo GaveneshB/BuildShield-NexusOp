@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd hilti-siteguard && npm install && npm run build",
+  "outputDirectory": "hilti-siteguard/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
