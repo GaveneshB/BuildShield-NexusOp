@@ -22,7 +22,20 @@ const IconRefresh = ({ className = 'w-5 h-5' }) => (
 );
 
 export default function ChaosCurePage({ triggerToast }) {
-  const [scenarios, setScenarios] = useState([]);
+  const [scenarios, setScenarios] = useState([
+    { id: 'cryptojacking',     label: 'Cryptojacking Energy Spike',                                          category: 'resource-abuse' },
+    { id: 'dataLeak',          label: 'Mass Data Exfiltration Detected',                                     category: 'data-exfiltration' },
+    { id: 'ddos',              label: 'DDoS Botnet Attack Detected',                                         category: 'network' },
+    { id: 'insiderThreat',     label: 'Insider Threat — Anomalous Access Pattern',                           category: 'identity' },
+    { id: 'ransomwareStaging', label: 'Ransomware Staging Indicators Detected',                              category: 'infra-integrity' },
+    { id: 'misconfigExposure', label: 'Misconfiguration Exposure Detected',                                  category: 'infra-integrity' },
+    { id: 'stolenCredentials', label: 'Stolen Cloud Credentials',                                           category: 'identity' },
+    { id: 'cve202144228',      label: 'Log4Shell — Apache Log4j RCE (CVE-2021-44228)',                       category: 'rce' },
+    { id: 'cve202334362',      label: 'MOVEit Transfer SQL Injection — Data Exfiltration (CVE-2023-34362)', category: 'data-exfiltration' },
+    { id: 'cve20170144',       label: 'EternalBlue / WannaCry Lateral Movement (CVE-2017-0144)',             category: 'lateral-movement' },
+    { id: 'cve20220847',       label: 'Dirty Pipe Linux Privilege Escalation (CVE-2022-0847)',               category: 'privilege-escalation' },
+    { id: 'cve20243400',       label: 'Palo Alto PAN-OS Zero-Day Command Injection (CVE-2024-3400)',         category: 'rce' },
+  ]);
   const [policies, setPolicies] = useState([
     { id: 'conservative', label: 'Conservative' },
     { id: 'balanced', label: 'Balanced' },
