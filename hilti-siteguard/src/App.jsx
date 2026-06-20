@@ -125,6 +125,54 @@ const IconRefresh = ({ className = "w-5 h-5" }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17" />
   </svg>
 )
+//Generate Automated Suggestion
+// Generates contextual operational suggestions based on real-time activity drivers
+const getActionSuggestion = (sub, efficiencyVal) => {
+  if (sub.phase === 'Completed') {
+    return {
+      text: 'Archive Environment',
+      subtext: 'Contract completed. Safe to deallocate.',
+      badgeStyle: 'bg-slate-500/10 text-slate-600 border-slate-500/20'
+    };
+  }
+
+  const breakdown = sub.activityBreakdown || { serverUptime: sub.hours, apiQueryVolume: 0, heavyPayloadSyncs: 0, primaryDriver: 'N/A' };
+
+  // Rule 1: High connection time but doing absolutely nothing
+  if (breakdown.serverUptime > 8 && breakdown.apiQueryVolume < 50 && breakdown.heavyPayloadSyncs === 0) {
+    return {
+      text: 'Enable Idle Auto-Pause',
+      subtext: 'Instance idling out of working shift.',
+      badgeStyle: 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+    };
+  }
+
+  // Rule 2: Flooding the server with database/API network IOPS requests
+  if (breakdown.apiQueryVolume > 1000) {
+    return {
+      text: 'Implement API Throttling',
+      subtext: 'High query velocity footprint detected.',
+      badgeStyle: 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+    };
+  }
+
+  // Rule 3: Heavy assets/file transfer spikes
+  if (breakdown.heavyPayloadSyncs > 25) {
+    return {
+      text: 'Schedule Off-Peak Sync',
+      subtext: 'Move heavy payload runs to night shift.',
+      badgeStyle: 'bg-blue-500/10 text-blue-600 border-blue-500/20'
+    };
+  }
+
+  // Standard Baseline State
+  return {
+    text: 'Maintain Standard Scale',
+    subtext: 'Workload pattern matches baseline.',
+    badgeStyle: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+  };
+};
+
 
 /* -------------------------------------------------------------
  * MAIN APP COMPONENT
