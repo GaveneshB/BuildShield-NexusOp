@@ -15,44 +15,10 @@ import {
 /* -------------------------------------------------------------
  * FIREBASE INITIALIZATION & DB LAYER
  * ------------------------------------------------------------- */
-import { initializeApp, getApps, getApp } from 'firebase/app'
-import { getFirestore, doc, onSnapshot, setDoc } from 'firebase/firestore'
-import { getAnalytics, isSupported as analyticsIsSupported } from 'firebase/analytics'
+import { doc, onSnapshot, setDoc } from 'firebase/firestore'
+import { db, rtdb, isFirebaseReady } from './firebase.config.js'
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-}
-
-let db = null
-let analytics = null
-let isFirebaseReady = false
-
-if (firebaseConfig && firebaseConfig.projectId) {
-  try {
-    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
-    db = getFirestore(app)
-    isFirebaseReady = true
-    console.log('%c✅ Firebase Connected — Project: ' + firebaseConfig.projectId, 'color: #34d399; font-weight: bold;')
-
-    // Initialize Analytics only in browser environments that support it
-    analyticsIsSupported().then(supported => {
-      if (supported) {
-        analytics = getAnalytics(app)
-        console.log('%c📊 Firebase Analytics active', 'color: #60a5fa; font-weight: bold;')
-      }
-    }).catch(() => {})
-  } catch (error) {
-    console.warn("Firebase initialization skipped, using Local Storage fallback:", error)
-  }
-}
-
-const APP_ID = firebaseConfig.projectId || 'buildshield-nexusop'
+const APP_ID = 'buildshield-nexusop'
 
 /* -------------------------------------------------------------
  * HIGH-QUALITY INLINE SVG ICONS
@@ -243,7 +209,7 @@ export default function App() {
     
     if (isFirebaseReady && db) {
       try {
-        setDoc(doc(db, `artifacts/${APP_ID}/public/data/subcontractors/list`), { data: updatedSubs }, { merge: true })
+        setDoc(doc(db, `artifacts/${APP_ID}/subcontractors/list`), { data: updatedSubs }, { merge: true })
           .catch(e => console.error("Firebase save subs error:", e))
       } catch (e) {
         console.warn("Firestore sync failed:", e)
@@ -289,7 +255,7 @@ export default function App() {
     if (isFirebaseReady && db) {
       try {
         updatedProjects.forEach(p => {
-          setDoc(doc(db, `artifacts/${APP_ID}/public/data/phantomResources/status`, p.id), {
+          setDoc(doc(db, `artifacts/${APP_ID}/phantomResources/${p.id}`), {
             projectId: p.id,
             projectName: p.name,
             leakedCost: p.cost,
@@ -368,7 +334,7 @@ export default function App() {
     
     if (isFirebaseReady && db) {
       try {
-        setDoc(doc(db, `artifacts/${APP_ID}/public/data/debtMetrics/current/current`), {
+        setDoc(doc(db, `artifacts/${APP_ID}/debtMetrics/current`), {
           baseDebtCarbon: carbonDebt,
           tickRateCarbon: currentCarbonRate,
           baseDebtFinancial: financialDebt,
@@ -414,7 +380,7 @@ export default function App() {
     if (!isFirebaseReady || !db) return
 
     // Lights out listener
-    const lightsOutUnsub = onSnapshot(doc(db, `artifacts/${APP_ID}/public/data/lightsOut/schedule/current`), (docSnap) => {
+    const lightsOutUnsub = onSnapshot(doc(db, `artifacts/${APP_ID}/lightsOut/current`), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data()
         if (data.shiftStart !== undefined) setShiftStart(data.shiftStart)
@@ -424,7 +390,7 @@ export default function App() {
     }, (err) => console.log("Lights out listener error:", err))
 
     // Subcontractors listener
-    const subsUnsub = onSnapshot(doc(db, `artifacts/${APP_ID}/public/data/subcontractors/list`), (docSnap) => {
+    const subsUnsub = onSnapshot(doc(db, `artifacts/${APP_ID}/subcontractors/list`), (docSnap) => {
       if (docSnap.exists()) {
         const docData = docSnap.data()
         if (Array.isArray(docData.data)) {
@@ -1232,7 +1198,7 @@ function LightsOutPage({
       
       if (isFirebaseReady && db) {
         try {
-          setDoc(doc(db, `artifacts/${APP_ID}/public/data/lightsOut/schedule/current`), {
+          setDoc(doc(db, `artifacts/${APP_ID}/lightsOut/current`), {
             shiftStart: shiftStart,
             shiftEnd: shiftEnd,
             updatedAt: Date.now()
