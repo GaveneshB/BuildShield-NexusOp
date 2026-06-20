@@ -1,0 +1,26 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "cloudResources",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "projectId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reapEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "initiatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "projects",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    }
+  ]
+}
