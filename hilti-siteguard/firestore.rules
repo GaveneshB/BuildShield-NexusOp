@@ -13,9 +13,7 @@ service cloud.firestore {
       allow write: if isAuth();
     }
     match /reapEvents/{id} {
-      allow read: if isAuth();
-      allow create: if isAuth();
-      allow update, delete: if false;  // immutable log
+      allow read, write: if isAuth();
     }
     match /reapSummary/{id} {
       allow read: if isAuth();
