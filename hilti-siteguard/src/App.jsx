@@ -18,6 +18,7 @@ import {
 import { doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { db, rtdb, isFirebaseReady } from './firebase.config.js'
 import PhantomReaperPageNew from './pages/PhantomReaperPage.jsx'
+import ChaosCurePage from './pages/ChaosCurePage.jsx'
 
 const APP_ID = 'buildshield-nexusop'
 
@@ -602,7 +603,7 @@ export default function App() {
               { id: 'dashboard', label: 'Central Dashboard', icon: IconHome },
               { id: 'debt-clock', label: 'Carbon & Security Debt', icon: IconClock },
               { id: 'lights-out', label: 'Lights Out Protocol', icon: IconCalendar },
-              { id: 'trust-score', label: 'Subcontractor Trust', icon: IconUsers },
+              { id: 'trust-score', label: 'Contractor Efficiency', icon: IconUsers },
               { id: 'phantom-reaper', label: 'Phantom Auto-Reaper', icon: IconGhost },
               { id: 'chaos-cure', label: 'Chaos & Cure Demo', icon: IconTerminal },
             ].map(item => {
@@ -781,8 +782,6 @@ export default function App() {
 
           {activePage === 'chaos-cure' && (
             <ChaosCurePage
-              cureResolved={cureResolved}
-              setCureResolved={setCureResolved}
               triggerToast={triggerToast}
             />
           )}
@@ -1044,7 +1043,7 @@ function DashboardView({
         >
           <div className="flex justify-between items-center">
             <h3 className="text-base font-bold text-slate-700 group-hover:text-rose-400 transition-colors">
-              👥 Subcontractor Trust Status
+              👥 Contractor Effective Status
             </h3>
             <IconChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
           </div>
@@ -1589,7 +1588,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
       {/* Header Container with Add Button reinstated */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-2">
-          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">👥 Subcontractor Efficiency Score</h2>
+          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">👥 Contractor Effeciency</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             Monitors real-time activity, operational workloads, and provides automated environmental downscaling suggestions.
           </p>
@@ -1610,7 +1609,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col">
-              <label className="text-xs font-semibold mb-1.5 text-slate-500">Subcontractor Name</label>
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Contractor Name</label>
               <input
                 type="text"
                 value={newSubName}
@@ -1765,15 +1764,30 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="space-y-0.5">
-                          <p className="font-semibold text-slate-800 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                            {breakdown.primaryDriver}
-                          </p>
-                          <p className="text-[11px] text-slate-500 font-mono">
-                            {breakdown.serverUptime}h Connected · {breakdown.apiQueryVolume} Queries · {breakdown.heavyPayloadSyncs} Drops
-                          </p>
-                        </div>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              {/* Live Automation Pulsing Radar */}
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+                              </span>
+                              <p className="font-bold text-slate-700 dark:text-slate-300">
+                                {breakdown.primaryDriver}
+                              </p>
+                            </div>
+                            
+                            {/* Real-time Telemetry Pipeline Logs */}
+                            <div className="flex flex-col text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5 font-mono">
+                              <p>📡 Compute Session: <span className="text-slate-700 dark:text-slate-300 font-semibold">{breakdown.serverUptime}h continuous</span></p>
+                              <p>📊 Network Payload: <span className="text-slate-700 dark:text-slate-300 font-semibold">{breakdown.apiQueryVolume} IOPS telemetry hits</span></p>
+                              <p>📦 S3 Object Drops: <span className="text-slate-700 dark:text-slate-300 font-semibold">{breakdown.heavyPayloadSyncs} bulk file streams</span></p>
+                            </div>
+                            
+                            {/* Automation Source Stamp */}
+                            <span className="inline-block text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider max-w-max">
+                              via buildshield-agent-v2.4
+                            </span>
+                          </div>
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
@@ -1984,9 +1998,9 @@ function PhantomReaperPage({ projects, terminateProject, totalReclaimedCost }) {
 }
 
 /* -------------------------------------------------------------
- * 6. "CHAOS & CURE" AI DEMO ENGINE PAGE
+ * 6. "CHAOS & CURE" AI DEMO ENGINE PAGE (LEGACY)
  * ------------------------------------------------------------- */
-function ChaosCurePage({ cureResolved, setCureResolved, triggerToast }) {
+function LegacyChaosCurePage({ cureResolved, setCureResolved, triggerToast }) {
   const [demoState, setDemoState] = useState(() => localStorage.getItem('demo_state') || 'idle')
   const [logs, setLogs] = useState(() => {
     const saved = localStorage.getItem('demo_logs')
