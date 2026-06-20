@@ -1,0 +1,6 @@
+
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/yourusername/buildshield.danzign/public_html
+    - /bin/cp -R * $DEPLOYPATH
