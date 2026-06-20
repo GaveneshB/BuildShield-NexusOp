@@ -3,5 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "vercel-build": "cd hilti-siteguard && npm install && npm run build"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.3"
   }
 }
