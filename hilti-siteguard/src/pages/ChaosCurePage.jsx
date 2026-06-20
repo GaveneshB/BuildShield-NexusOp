@@ -34,7 +34,14 @@ export default function ChaosCurePage({ triggerToast }) {
   const [incidentId, setIncidentId] = useState(null);
   const [incident, setIncident] = useState(null);
   const [logs, setLogs] = useState(['[*] System secure. Ready for testing.']);
-  const [telemetry, setTelemetry] = useState([]);
+  const TELEMETRY_WINDOW = 30;
+  const [telemetry, setTelemetry] = useState(() =>
+    Array.from({ length: 30 }, (_, i) => ({
+      time: i,
+      cpu: 8 + Math.random() * 4,
+      network: 12 + Math.random() * 5,
+    }))
+  );
   const [running, setRunning] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
 
@@ -137,11 +144,10 @@ export default function ChaosCurePage({ triggerToast }) {
     if (mockScenarios.length > 0) setSelectedScenario(mockScenarios[0].id);
   }, []);
 
-  // Simulate telemetry updates
+  // Simulate telemetry updates (rolling 30-point window)
   useEffect(() => {
     const interval = setInterval(() => {
       setTelemetry(prev => {
-        const next = [...prev.slice(1)];
         let cpu = 8 + Math.random() * 4;
         let network = 12 + Math.random() * 5;
 
@@ -153,8 +159,9 @@ export default function ChaosCurePage({ triggerToast }) {
           network = 20 + Math.random() * 10;
         }
 
-        next.push({ time: prev.length, cpu, network });
-        return next;
+        const next = [...prev, { time: prev.length, cpu, network }];
+        // Keep only the last TELEMETRY_WINDOW points
+        return next.length > TELEMETRY_WINDOW ? next.slice(next.length - TELEMETRY_WINDOW) : next;
       });
     }, 1000);
 
