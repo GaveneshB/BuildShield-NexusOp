@@ -1588,7 +1588,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
       {/* Header Container with Add Button reinstated */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-2">
-          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">👥 Subcontractor Trust Score</h2>
+          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">👥 Contractor Effective Score</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             Monitors real-time activity, operational workloads, and provides automated environmental downscaling suggestions.
           </p>

@@ -135,13 +135,13 @@ export default function ChaosCurePage({ triggerToast }) {
 
   // Fetch scenarios on mount
   useEffect(() => {
-    fetch('http://localhost:5555/api/chaos/scenarios')
-      .then(r => r.json())
-      .then(data => {
-        setScenarios(data);
-        if (data.length > 0) setSelectedScenario(data[0].id);
-      })
-      .catch(err => console.error('Failed to fetch scenarios:', err));
+    const mockScenarios = [
+      { id: 'SCENARIO_1_DATA_EXFIL', label: 'Rogue Data Exfiltration' },
+      { id: 'SCENARIO_2_CRYPTO_MINING', label: 'Cryptojacking Workload' },
+      { id: 'SCENARIO_3_IDLE_SPRAWL', label: 'Idle Zombie Infrastructure' },
+    ];
+    setScenarios(mockScenarios);
+    if (mockScenarios.length > 0) setSelectedScenario(mockScenarios[0].id);
   }, []);
 
   // Simulate telemetry updates (rolling 30-point window)
