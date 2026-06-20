@@ -1043,7 +1043,7 @@ function DashboardView({
         >
           <div className="flex justify-between items-center">
             <h3 className="text-base font-bold text-slate-700 group-hover:text-rose-400 transition-colors">
-              👥 Subcontractor Trust Status
+              👥 Contractor Effective Status
             </h3>
             <IconChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
           </div>
