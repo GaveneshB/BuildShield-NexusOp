@@ -1429,13 +1429,22 @@ function LightsOutPage({
 }
 
 /* -------------------------------------------------------------
- * 4. SUBCONTRACTOR TRUST SCORE PAGE (REFACTORED)
+ * 4. SUBCONTRACTOR TRUST SCORE PAGE (REFACTORED & FULLY RESTORED)
  * ------------------------------------------------------------- */
 function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToast }) {
   const [search, setSearch] = useState('')
   const [filterPhase, setFilterPhase] = useState('All')
   
-  // Safe filtering
+  // Form input states for creating new contractors safely
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newSubName, setNewSubName] = useState('')
+  const [newSubPhase, setNewSubPhase] = useState('Active')
+  const [newSubDriver, setNewSubDriver] = useState('Standard Connection')
+  const [newSubUptime, setNewSubUptime] = useState(1.0)
+  const [newSubQueries, setNewSubQueries] = useState(10)
+  const [newSubDrops, setNewSubDrops] = useState(0)
+
+  // Safe filtering logic
   const filteredSubs = useMemo(() => {
     return subs.filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase())
@@ -1444,13 +1453,194 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
     })
   }, [subs, search, filterPhase])
 
+  // Subcontractor submission handler
+  const handleAddSub = (e) => {
+    e.preventDefault()
+    if (!newSubName.trim()) {
+      triggerToast("Please fill in the subcontractor name.", "warning")
+      return
+    }
+
+    const calculatedHours = Number(newSubUptime)
+
+    const newSub = {
+      id: Date.now(),
+      name: newSubName,
+      phase: newSubPhase,
+      hours: calculatedHours, // Backward compatibility parameter
+      downloads: Number(newSubDrops), // Maps safely back to dashboard legacy calculations
+      accessStatus: newSubPhase === 'Completed' ? 'Revoked' : 'Granted',
+      activityBreakdown: {
+        serverUptime: calculatedHours,
+        apiQueryVolume: Number(newSubQueries),
+        heavyPayloadSyncs: Number(newSubDrops),
+        primaryDriver: newSubDriver
+      }
+    }
+
+    saveSubs([...subs, newSub])
+    
+    // Reset state values cleanly
+    setNewSubName('')
+    setNewSubUptime(1.0)
+    setNewSubQueries(10)
+    setNewSubDrops(0)
+    setNewSubDriver('Standard Connection')
+    setShowAddForm(false)
+    
+    triggerToast(`Added subcontractor ${newSub.name} to optimization index.`, "success")
+  }
+
   const getSubColor = (s) => s > 80 ? 'bg-emerald-500' : s >= 50 ? 'bg-yellow-500' : 'bg-red-500'
 
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Search filters markup remains identical to prevent layout breakage */}
-      
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-sm overflow-hidden">
+      {/* Header Container with Add Button reinstated */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">👥 Subcontractor Trust Score</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
+            Monitors real-time activity, operational workloads, and provides automated environmental downscaling suggestions.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="px-4 py-2.5 rounded-xl bg-rose-400 hover:bg-rose-500 text-white font-bold text-sm shadow-sm shadow-rose-200 flex items-center gap-2 self-start md:self-auto transition-colors"
+        >
+          {showAddForm ? 'Cancel Registration' : 'Register Subcontractor'}
+        </button>
+      </div>
+
+      {/* Dynamic Registration Input Form Layout */}
+      {showAddForm && (
+        <form onSubmit={handleAddSub} className="p-6 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm space-y-4 max-w-2xl animate-slide-in">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Register Subcontractor Node</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Subcontractor Name</label>
+              <input
+                type="text"
+                value={newSubName}
+                onChange={(e) => setNewSubName(e.target.value)}
+                placeholder="e.g., Apex Structural Ltd"
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Contract Lifecycle Status</label>
+              <select
+                value={newSubPhase}
+                onChange={(e) => setNewSubPhase(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700 font-medium"
+              >
+                <option value="Active">Active Contract</option>
+                <option value="Completed">Completed Lifecycle</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Primary Workload Activity Driver</label>
+              <select
+                value={newSubDriver}
+                onChange={(e) => setNewSubDriver(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700 font-medium"
+              >
+                <option value="Standard Connection">Standard Connection</option>
+                <option value="Heavy API Querying">Heavy API Querying</option>
+                <option value="Continuous Background Syncing">Continuous Background Syncing</option>
+                <option value="Idle Connection">Idle Connection</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Simulated Server Connection (Hours)</label>
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                max="24"
+                value={newSubUptime}
+                onChange={(e) => setNewSubUptime(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Simulated API Query Count</label>
+              <input
+                type="number"
+                min="0"
+                max="5000"
+                value={newSubQueries}
+                onChange={(e) => setNewSubQueries(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Simulated Large Heavy Payload Drops</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={newSubDrops}
+                onChange={(e) => setNewSubDrops(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-colors text-slate-700"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-teal-400 hover:bg-teal-500 text-white font-bold text-sm rounded-xl transition-colors shadow-sm shadow-teal-100"
+            >
+              Confirm Subcontractor Registration
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Searching & Filter Bar Row Controls */}
+      <div className="p-4 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative flex-grow max-w-md">
+          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+            <IconSearch />
+          </span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search subcontractors by registry name..."
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-rose-300 transition-all text-slate-700"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 self-start md:self-auto text-sm shrink-0">
+          <span className="text-slate-400 font-medium">Contract Phase:</span>
+          <div className="flex border border-slate-200 rounded-xl overflow-hidden bg-white">
+            {['All', 'Active', 'Completed'].map(phase => (
+              <button
+                key={phase}
+                onClick={() => setFilterPhase(phase)}
+                className={`px-3 py-1.5 font-bold text-xs transition-colors ${
+                  filterPhase === phase
+                    ? 'bg-rose-400 text-white'
+                    : 'text-slate-500 hover:bg-slate-50'
+                }`}
+              >
+                {phase}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Subcontractor Workload Diagnostic Data Grid */}
+      <div className="rounded-2xl border border-slate-200 bg-white dark:bg-[#131b2e] shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -1464,80 +1654,76 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredSubs.map(sub => {
-                // Ensure default fallbacks are provided to safeguard legacy calculation components
-                const scoreVal = getScore(sub.downloads || 0, sub.hours || 0, sub.phase, sub.accessStatus)
-                const suggestion = getActionSuggestion(sub, scoreVal)
-                const breakdown = sub.activityBreakdown || { serverUptime: sub.hours, apiQueryVolume: 0, heavyPayloadSyncs: 0, primaryDriver: 'Standard Connection' }
+              {filteredSubs.length > 0 ? (
+                filteredSubs.map(sub => {
+                  const scoreVal = getScore(sub.downloads || 0, sub.hours || 0, sub.phase, sub.accessStatus)
+                  const suggestion = getActionSuggestion(sub, scoreVal)
+                  const breakdown = sub.activityBreakdown || { serverUptime: sub.hours, apiQueryVolume: 0, heavyPayloadSyncs: 0, primaryDriver: 'Standard Connection' }
 
-                return (
-                  <tr key={sub.id} className="table-row-interactive text-sm">
-                    {/* Column 1: Identity */}
-                    <td className="py-4 px-6">
-                      <p className="font-bold text-slate-800 dark:text-slate-200">{sub.name}</p>
-                      <span className="text-xs text-slate-500 font-mono">UID-{sub.id.toString().slice(-6)}</span>
-                    </td>
-                    
-                    {/* Column 2: Phase Status */}
-                    <td className="py-4 px-6">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                        sub.phase === 'Active' ? 'bg-blue-500/10 text-blue-600' : 'bg-slate-500/10 text-slate-500'
-                      }`}>
-                        {sub.phase}
-                      </span>
-                    </td>
-                    
-                    {/* Refactored Column 3: Detailed Activity Breakdowns */}
-                    <td className="py-4 px-6">
-                      <div className="space-y-0.5">
-                        <p className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                          {breakdown.primaryDriver}
-                        </p>
-                        <p className="text-[11px] text-slate-500 font-mono">
-                          {breakdown.serverUptime}h Connected · {breakdown.apiQueryVolume} Queries · {breakdown.heavyPayloadSyncs} Drops
-                        </p>
-                      </div>
-                    </td>
-                    
-                    {/* Column 4: Efficiency Level */}
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-20 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shrink-0">
-                          <div className={`h-full ${getSubColor(scoreVal)}`} style={{ width: `${scoreVal}%` }} />
+                  return (
+                    <tr key={sub.id} className="table-row-interactive text-sm">
+                      <td className="py-4 px-6">
+                        <p className="text-sm transition-all duration-200 bg-transparent hover:bg-slate-50/30 border border-slate-200 dark:border-slate-800 rounded-xl my-2 block md:table-row shadow-sm hover:shadow-md hover:border-rose-300 dark:hover:border-rose-500/50">{sub.name}</p>
+                        <span className="text-xs text-slate-500 font-mono">UID-{sub.id.toString().slice(-6)}</span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                          sub.phase === 'Active' ? 'bg-blue-500/10 text-blue-600' : 'bg-slate-500/10 text-slate-500'
+                        }`}>
+                          {sub.phase}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                            {breakdown.primaryDriver}
+                          </p>
+                          <p className="text-[11px] text-slate-500 font-mono">
+                            {breakdown.serverUptime}h Connected · {breakdown.apiQueryVolume} Queries · {breakdown.heavyPayloadSyncs} Drops
+                          </p>
                         </div>
-                        <span className="font-bold font-mono">{scoreVal}%</span>
-                      </div>
-                    </td>
-                    
-                    {/* New Column 5: Automated Suggestion Action Row */}
-                    <td className="py-4 px-6">
-                      <div className="flex flex-col">
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold border max-w-max ${suggestion.badgeStyle}`}>
-                          {suggestion.text}
-                        </span>
-                        <span className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[180px]">
-                          {suggestion.subtext}
-                        </span>
-                      </div>
-                    </td>
-                    
-                    {/* Column 6: Toggle Control Throttling Option */}
-                    <td className="py-4 px-6 text-right">
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={sub.accessStatus === 'Granted'}
-                          onChange={() => toggleSubAccess(sub.id)}
-                          disabled={sub.phase === 'Completed'}
-                          className="sr-only peer"
-                        />
-                        <div className="w-9 h-5 bg-slate-200 dark:bg-slate-800 rounded-full peer peer-focus:ring-2 peer-focus:ring-red-500/20 peer-checked:bg-emerald-500 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
-                      </label>
-                    </td>
-                  </tr>
-                )
-              })}
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-20 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shrink-0">
+                            <div className={`h-full ${getSubColor(scoreVal)}`} style={{ width: `${scoreVal}%` }} />
+                          </div>
+                          <span className="font-bold font-mono text-slate-700 dark:text-slate-300">{scoreVal}%</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex flex-col">
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold border max-w-max ${suggestion.badgeStyle}`}>
+                            {suggestion.text}
+                          </span>
+                          <span className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[180px]">
+                            {suggestion.subtext}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={sub.accessStatus === 'Granted'}
+                            onChange={() => toggleSubAccess(sub.id)}
+                            disabled={sub.phase === 'Completed'}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-slate-200 dark:bg-slate-800 rounded-full peer peer-checked:bg-teal-400 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                        </label>
+                      </td>
+                    </tr>
+                  )
+                })
+              ) : (
+                <tr>
+                  <td colSpan="6" className="py-8 text-center text-slate-400 text-xs font-medium">
+                    No subcontractor workflow registries match the current query filter.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
