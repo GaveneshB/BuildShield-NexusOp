@@ -603,7 +603,7 @@ export default function App() {
               { id: 'dashboard', label: 'Central Dashboard', icon: IconHome },
               { id: 'debt-clock', label: 'Carbon & Security Debt', icon: IconClock },
               { id: 'lights-out', label: 'Lights Out Protocol', icon: IconCalendar },
-              { id: 'trust-score', label: 'Subcontractor Trust', icon: IconUsers },
+              { id: 'trust-score', label: 'Contractor Efficiency', icon: IconUsers },
               { id: 'phantom-reaper', label: 'Phantom Auto-Reaper', icon: IconGhost },
               { id: 'chaos-cure', label: 'Chaos & Cure Demo', icon: IconTerminal },
             ].map(item => {
@@ -1588,7 +1588,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
       {/* Header Container with Add Button reinstated */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-2">
-          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">👥 Contractor Effective Score</h2>
+          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">👥 Contractor Effeciency</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             Monitors real-time activity, operational workloads, and provides automated environmental downscaling suggestions.
           </p>
@@ -1609,7 +1609,7 @@ function TrustScorePage({ subs, toggleSubAccess, getScore, saveSubs, triggerToas
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col">
-              <label className="text-xs font-semibold mb-1.5 text-slate-500">Subcontractor Name</label>
+              <label className="text-xs font-semibold mb-1.5 text-slate-500">Contractor Name</label>
               <input
                 type="text"
                 value={newSubName}
