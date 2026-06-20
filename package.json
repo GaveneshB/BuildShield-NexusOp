@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/GaveneshB/BuildShield-NexusOp/issues"
   },
-  "homepage": "https://github.com/GaveneshB/BuildShield-NexusOp#readme"
+  "homepage": "https://github.com/GaveneshB/BuildShield-NexusOp#readme",
+  "dependencies": {
+    "firebase": "^12.15.0"
+  }
 }
